@@ -1,14 +1,23 @@
+// family.hpp
 #pragma once
 #include <iostream>
 #include <string>
 
 namespace FamilyInfo
 {
+	/// <summary>
+	/// 性别枚举类型，0男 1女
+	/// </summary>
 	enum SexEnum
 	{
 		Man,
 		Woman
 	};
+	/// <summary>
+	/// 获取性别的字符串
+	/// </summary>
+	/// <param name="sex">性别枚举</param>
+	/// <returns>字符串，"男"或"女"</returns>
 	std::string getSexString(SexEnum sex)
 	{
 		return sex ? "女" : "男";
@@ -59,6 +68,12 @@ namespace FamilyInfo
 		}
 		int year, month, day;
 	};
+	/// <summary>
+	/// 人对象 含有一个id、姓名、生日、性别
+	/// </summary>
+	/// <remarks>
+	/// 基本对象，用于存储家庭成员的基本信息。
+	/// </remarks>
 	class Person
 	{
 		/// <summary>
@@ -85,7 +100,7 @@ namespace FamilyInfo
 		/// <param name="_name">姓名.</param>
 		/// <param name="_birthday">生日，string类型.</param>
 		/// <param name="sex">性别.</param>
-		Person(int _name, std::string _birthday, SexEnum sex)
+		Person(std::string _name, std::string _birthday, SexEnum sex)
 		{
 			this->name = _name;
 			this->birthday = BirthdayClass(_birthday);
@@ -99,7 +114,7 @@ namespace FamilyInfo
 		/// <param name="_name">姓名.</param>
 		/// <param name="_birthday">生日，string类型.</param>
 		/// <param name="sex">性别.</param>
-		Person(int _name, int _birthday, SexEnum sex)
+		Person(std::string _name, int _birthday, SexEnum sex)
 		{
 			this->name = _name;
 			this->birthday = BirthdayClass(_birthday);

@@ -23,5 +23,11 @@
     <ClInclude Include="family.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="config.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\Administrator\Downloads\json.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
