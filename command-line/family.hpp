@@ -1,5 +1,6 @@
 #pragma once
-#include <bits/stdc++.h>
+#include <iostream>
+#include <string>
 
 namespace FamilyInfo
 {
@@ -104,5 +105,11 @@ namespace FamilyInfo
 			this->birthday = BirthdayClass(_birthday);
 			this->sex = sex;
 		}
+
+
+		/// <summary>
+		/// see cref="Person"/> 的一个析构函数，释放对象占用的内存
+		/// </summary>
+		~Person() {}
 	};
 }
