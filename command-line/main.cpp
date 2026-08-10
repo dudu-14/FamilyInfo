@@ -6,22 +6,12 @@
 using namespace FamilyInfo;
 Config::AppConfig g_config; // 全局配置对象
 
-/// <summary>
-/// 初始化整体
-/// </summary>
-/// <returns>0为正常，非0为异常</returns>
-bool init()
+void pause()
 {
-	using namespace FamilyInfo::Log;
-	if (!FamilyInfo::Config::init()) {
-		logWarn("无法初始化配置文件，配置存储可能失效");
-		logDebug("配置文件初始化失败");
-		return true;
-	}
-	logInfo("配置文件初始化成功");
-
-	return false;
+	std::cout << "按回车键继续..." << std::endl;
+	std::cin.get();
 }
+
 
 /// <summary>
 /// 程序主入口
@@ -30,11 +20,10 @@ bool init()
 int main()
 {
 	using namespace std;
-	Log::initLog();
 
-	if (init())
-	{
-		cerr << "[ERROR]程序初始化失败，具体内容可查看日志文件，目录为logs/";
-	}
+	g_config = Config::loadConfig();
+	Log::initLog(g_config.logFile, g_config.debugLogFile, Log::configToLogLevel(g_config.logLevel));
+	cout << "======家庭信息管理系统 v1.0.0=====\n";
 
+	FamilyInfo::exit(0);
 }

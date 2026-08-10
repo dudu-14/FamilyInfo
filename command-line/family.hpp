@@ -5,6 +5,17 @@
 
 namespace FamilyInfo
 {
+	void exit(int _n)
+	{
+		std::cout << "你确认要退出吗？(y/n): ";
+		char c = std::cin.get();
+		if (c == 'y' || c == 'Y')
+		{
+			std::exit(0);
+		}
+		return;
+	}
+
 	/// <summary>
 	/// 性别枚举类型，0男 1女
 	/// </summary>

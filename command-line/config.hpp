@@ -5,6 +5,7 @@
 #include <fstream>
 #include "family.hpp"
 #include "json.hpp"
+#include "log.hpp"
 
 using json = nlohmann::json;
 
@@ -24,34 +25,34 @@ namespace FamilyInfo::Config
 	/// 初始化配置文件
 	/// </summary>
 	/// <returns>正常返回true,失败返回false</returns>
-	bool init()
-	{
-		if (checkFileExists())
-		{
-			return true;
-		}
-		else
-		{
-			std::ofstream configFile("data/config.json");
-			if (!configFile.is_open())
-			{
-				std::cerr << "[ERROR] 无法创建配置文件" << std::endl;
-				Log::logError("无法创建配置文件");
-				return false;
-			}
-			configFile << "vision 1.0\n" << std::endl;
-			configFile.close();
-			return true;
-		}
-	}
+	//bool init()
+	//{
+	//	if (checkFileExists())
+	//	{
+	//		return true;
+	//	}
+	//	std::filesystem::path configPath = "data/config.json";
+	//	std::filesystem::create_directories(configPath.parent_path());
+	//	std::ofstream configFile(configPath);
+	//	if (!configFile.is_open())
+	//	{
+	//		std::cerr << "[ERROR] 无法创建配置文件" << std::endl;
+	//		Log::logError("无法创建配置文件");
+	//		return false;
+	//	}
+	//	configFile.close();
+	//	return true;
+	//}
+
 	/// <summary>配置结构体</summary>
 	struct AppConfig {
 		// paths
 		std::string dataFile = "data/family_data.json";
 		std::string logFile = "logs/system.log";
+		std::string debugLogFile = "logs/debug.log";
 		std::string backupDir = "data/backup/";
 		// logging
-		std::string logLevel = "info";
+		int logLevel = 3; // 根据枚举，0 fatal, 1 error, 2 warning, 3 info, 4 debug
 		bool logToConsole = true;
 		bool logToFile = true;
 		// display
@@ -78,10 +79,11 @@ namespace FamilyInfo::Config
 				{"paths", {
 					{"data_file", cfg.dataFile},
 					{"log_file", cfg.logFile},
+					{"debug_log_file", cfg.debugLogFile},
 					{"backup_dir", cfg.backupDir}
 				}},
 				{"logging", {
-					{"level", cfg.logLevel},
+					{"level", 3},
 					{"output_to_console", cfg.logToConsole},
 					{"output_to_file", cfg.logToFile}
 				}},
@@ -110,6 +112,7 @@ namespace FamilyInfo::Config
 		//paths
 		cfg.dataFile = j.value("paths", json()).value("data_file", cfg.dataFile);
 		cfg.logFile = j.value("paths", json()).value("log_file", cfg.logFile);
+		cfg.debugLogFile = j.value("paths", json()).value("debug_log_file", cfg.debugLogFile);
 		cfg.backupDir = j.value("paths", json()).value("backup_dir", cfg.backupDir);
 		//logging
 		auto logObj = j.value("logging", json());

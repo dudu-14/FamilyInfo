@@ -22,8 +22,24 @@ namespace FamilyInfo::Log
 	// 全局日志文件流
 	inline std::ofstream g_logFile;
 
-	// 初始化日志系统（在 main 开头调用一次）
-	inline void initLog(const std::string& filePath = "logs/system.log",
+	inline LogLevel configToLogLevel(int level) {
+		switch (level) {
+		case 0: return LogLevel::FATAL;
+		case 1: return LogLevel::ERROR;
+		case 2: return LogLevel::WARNING;
+		case 3: return LogLevel::INFO;
+		case 4: return LogLevel::DEBUG;
+		default: return LogLevel::INFO; // 默认 INFO
+		}
+	}
+
+/// <summary>
+/// 初始化日志系统（在 main 开头调用一次）
+/// </summary>
+/// <param name="filePath">日志文件路径</param>
+/// <param name="debugFilePath">调试日志文件路径</param>
+/// <param name="level">日志等级.</param>
+	inline void initLog(const std::string& filePath = "logs/system.log", const std::string& debugFilePath = "logs/debug.log",
 		LogLevel level = LogLevel::INFO) {
 		g_logLevel = level;
 		if (!filePath.empty()) {
