@@ -93,6 +93,7 @@ namespace FamilyInfo
 		/// 性别枚举，0男 1女  <code>getSexString(sex)</code>获得字符串
 		/// </summary>
 		SexEnum sex;
+		static int last_id;
 	public:
 		/// <summary>
 		/// 构造 <see cref="Person"/> class.
@@ -105,6 +106,7 @@ namespace FamilyInfo
 			this->name = _name;
 			this->birthday = BirthdayClass(_birthday);
 			this->sex = sex;
+			this->id = ++last_id;
 		}
 
 
@@ -119,6 +121,7 @@ namespace FamilyInfo
 			this->name = _name;
 			this->birthday = BirthdayClass(_birthday);
 			this->sex = sex;
+			this->id = ++last_id;
 		}
 
 

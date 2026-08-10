@@ -2,19 +2,131 @@
 #pragma once
 #include <filesystem>
 #include <iostream>
+#include <fstream>
 #include "family.hpp"
 #include "json.hpp"
 
-namespace FamilyInfo
+using json = nlohmann::json;
+
+namespace FamilyInfo::Config
 {
 	/// <summary>
 	/// 检测配置文件是否存在
 	/// </summary>
 	/// <returns>bool类型，存在返回true，否则返回false</returns>
-	inline bool checkFileExists(std::filesystem::path _configPath = "config.ini")
+	inline bool checkFileExists(std::filesystem::path _configPath = "data/config.json")
 	{
 		return std::filesystem::exists(_configPath);
 	}
 
-	
+
+	/// <summary>
+	/// 初始化配置文件
+	/// </summary>
+	/// <returns>正常返回true,失败返回false</returns>
+	bool init()
+	{
+		if (checkFileExists())
+		{
+			return true;
+		}
+		else
+		{
+			std::ofstream configFile("data/config.json");
+			if (!configFile.is_open())
+			{
+				std::cerr << "[ERROR] 无法创建配置文件" << std::endl;
+				Log::logError("无法创建配置文件");
+				return false;
+			}
+			configFile << "vision 1.0\n" << std::endl;
+			configFile.close();
+			return true;
+		}
+	}
+	/// <summary>配置结构体</summary>
+	struct AppConfig {
+		// paths
+		std::string dataFile = "data/family_data.json";
+		std::string logFile = "logs/system.log";
+		std::string backupDir = "data/backup/";
+		// logging
+		std::string logLevel = "info";
+		bool logToConsole = true;
+		bool logToFile = true;
+		// display
+		std::string dateFormat = "YYYY-MM-DD";
+		std::string sortBy = "name";
+		std::string sortOrder = "asc";
+		// behavior
+		bool autoBackup = true;
+		int backupIntervalDays = 7;
+		bool confirmOnDelete = true;
+	};
+
+	/// <summary>加载配置，如果文件不存在则使用默认值并创建</summary>
+	inline AppConfig loadConfig(const std::filesystem::path& configPath = "data/config.json") {
+		AppConfig cfg;
+
+		if (!std::filesystem::exists(configPath)) {
+			// 目录不存在则创建
+			std::filesystem::create_directories(configPath.parent_path());
+
+			// 创建默认配置文件（写入 JSON）
+			json defaultJson = {
+				{"app", {{"name", "家庭信息管理系统"}, {"version", "1.0.0"}}},
+				{"paths", {
+					{"data_file", cfg.dataFile},
+					{"log_file", cfg.logFile},
+					{"backup_dir", cfg.backupDir}
+				}},
+				{"logging", {
+					{"level", cfg.logLevel},
+					{"output_to_console", cfg.logToConsole},
+					{"output_to_file", cfg.logToFile}
+				}},
+				{"display", {
+					{"date_format", cfg.dateFormat},
+					{"sort_by", cfg.sortBy},
+					{"sort_order", cfg.sortOrder}
+				}},
+				{"behavior", {
+					{"auto_backup", cfg.autoBackup},
+					{"backup_interval_days", cfg.backupIntervalDays},
+					{"confirm_on_delete", cfg.confirmOnDelete}
+				}}
+			};
+			std::ofstream file(configPath);
+			file << std::setw(4) << defaultJson;
+			return cfg; // 返回默认值
+		}
+
+		// 文件存在，读取并解析
+		std::ifstream file(configPath);
+		json j;
+		file >> j;
+
+		// 如果json哪个值不存在就使用默认值
+		//paths
+		cfg.dataFile = j.value("paths", json()).value("data_file", cfg.dataFile);
+		cfg.logFile = j.value("paths", json()).value("log_file", cfg.logFile);
+		cfg.backupDir = j.value("paths", json()).value("backup_dir", cfg.backupDir);
+		//logging
+		auto logObj = j.value("logging", json());
+		cfg.logLevel = logObj.value("level", cfg.logLevel);
+		cfg.logToConsole = logObj.value("output_to_console", cfg.logToConsole);
+		cfg.logToFile = logObj.value("output_to_file", cfg.logToFile);
+		//display
+		auto dispObj = j.value("display", json());
+		cfg.dateFormat = dispObj.value("date_format", cfg.dateFormat);
+		cfg.sortBy = dispObj.value("sort_by", cfg.sortBy);
+		cfg.sortOrder = dispObj.value("sort_order", cfg.sortOrder);
+		// behavior
+		auto behObj = j.value("behavior", json());
+		cfg.autoBackup = behObj.value("auto_backup", cfg.autoBackup);
+		cfg.backupIntervalDays = behObj.value("backup_interval_days", cfg.backupIntervalDays);
+		cfg.confirmOnDelete = behObj.value("confirm_on_delete", cfg.confirmOnDelete);
+
+		return cfg;
+	}
 }
