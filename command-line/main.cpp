@@ -28,11 +28,15 @@ int main()
 
 	g_config = Config::loadConfig();
 	Log::initLog(g_config.logFile, g_config.debugLogFile, Log::configToLogLevel(g_config.logLevel));
-	Person::last_id = g_config.last_id;
+	last_id = g_config.last_id; // 初始化全局last_id
 	cout << "======家庭信息管理系统 v1.0.0=====\n";
 	while (1)
 	{
 		// 主循环
+
+		Edit::loadPersonData(g_familyMembers, g_config.dataFile); // 每次循环都加载数据，确保数据最新
+
+		Log::logInfo("进入主循环，当前家庭成员数量: " + std::to_string(g_familyMembers.size()));
 		cout << "1. 添加家庭成员\n";
 		cout << "2. 显示家庭成员\n";
 		cout << "3. 删除家庭成员\n";
@@ -52,11 +56,11 @@ int main()
 			cout << "你确认要退出吗？(y/n): ";
 			char c;
 			scanf("%c", &c);
-			if (c == 'y' || c == 'Y')
+			if (c == 'n' || c == 'N')
 			{
-				std::exit(0);
+				continue;
 			}
-			continue;
+			exit(0);
 		}
 		if (s == 1)
 		{
@@ -80,13 +84,20 @@ int main()
 		{
 			// 显示家庭成员
 			cout << "======家庭成员列表======\n";
-			for (const auto& person : g_familyMembers)
+			if (g_familyMembers.empty())
 			{
-				cout << "ID: " << person.getId() << ", 姓名: " << person.getName()
-					<< ", 生日: " << person.getBirthday().year << "-"
-					<< person.getBirthday().month << "-"
-					<< person.getBirthday().day
-					<< ", 性别: " << person.getSex();
+				cout << "没有家庭成员数据。\n";
+				continue;
+			}
+			for (auto& person : g_familyMembers)
+			{
+				cout << "ID: " << person.getId()
+					<< ", 姓名: " << person.getName()
+					<< ", 生日: " << person.getBirthdayString()
+					<< ", 年龄: " << person.getAge()
+					<< ", 性别: " << person.getSex()
+					<< endl;
+			}
 		}
 	}
 	return 0;

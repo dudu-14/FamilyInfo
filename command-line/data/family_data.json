@@ -1,8 +1,8 @@
 [
     {
-        "birthday": "0--2028895104-423",
+        "birthday": "1234-56-78",
         "id": 1,
-        "name": "abc",
-        "sex": "女"
+        "name": "2",
+        "sex": "woman"
     }
 ]

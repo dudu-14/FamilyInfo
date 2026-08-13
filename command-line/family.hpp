@@ -9,6 +9,8 @@ using json = nlohmann::json;
 namespace FamilyInfo
 {
 
+	int last_id = 0;
+
 	/// <summary>
 	/// 性别枚举类型，0男 1女
 	/// </summary>
@@ -24,7 +26,7 @@ namespace FamilyInfo
 	/// <returns>字符串，"男"或"女"</returns>
 	std::string getSexString(SexEnum sex)
 	{
-		return sex ? "女" : "男";
+		return sex ? "woman" : "man";
 	}
 
 
@@ -52,7 +54,11 @@ namespace FamilyInfo
 		/// 此函数用于将YYYY-MM-DD格式的字符串日期解析为年、月、日。
 		/// </remarks>
 		BirthdayClass(std::string _birthday)
-		{}
+		{
+			this->year = (std::stoi(_birthday.substr(0, 4)));
+			this->month = (std::stoi(_birthday.substr(5, 2)));
+			this->day = (std::stoi(_birthday.substr(8, 2)));
+		}
 
 
 		/// <summary>
@@ -102,6 +108,9 @@ namespace FamilyInfo
 		/// 年龄，获取年龄时自动计算
 		/// </summary>
 		int age;
+		/// <summary>
+		/// 上一个id，用于生成新的id
+		/// </summary>
 	public:
 
 		//各种get
@@ -119,10 +128,6 @@ namespace FamilyInfo
 			return age;
 		}
 
-		/// <summary>
-		/// 上一个id，用于生成新的id
-		/// </summary>
-		static int last_id;
 		json toJson()
 		{
 			json j;

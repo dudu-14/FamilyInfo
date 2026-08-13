@@ -18,6 +18,9 @@
         "output_to_console": true,
         "output_to_file": true
     },
+    "number": {
+        "last_id": 0
+    },
     "paths": {
         "backup_dir": "data/backup/",
         "data_file": "data/family_data.json",
