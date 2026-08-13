@@ -26,10 +26,13 @@
     <ClInclude Include="config.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="log.hpp">
+    <ClInclude Include="json.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="json.hpp">
+    <ClInclude Include="edit.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="log.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,22 +2,15 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include "json.hpp"
 
+using json = nlohmann::json;
 namespace FamilyInfo
 {
-	void exit(int _n)
-	{
-		std::cout << "ÄãÈ·ÈÏÒªÍË³öÂğ£¿(y/n): ";
-		char c = std::cin.get();
-		if (c == 'y' || c == 'Y')
-		{
-			std::exit(0);
-		}
-		return;
-	}
 
 	/// <summary>
-	/// ĞÔ±ğÃ¶¾ÙÀàĞÍ£¬0ÄĞ 1Å®
+	/// æ€§åˆ«æšä¸¾ç±»å‹ï¼Œ0ç”· 1å¥³
 	/// </summary>
 	enum SexEnum
 	{
@@ -25,50 +18,50 @@ namespace FamilyInfo
 		Woman
 	};
 	/// <summary>
-	/// »ñÈ¡ĞÔ±ğµÄ×Ö·û´®
+	/// è·å–æ€§åˆ«çš„å­—ç¬¦ä¸²
 	/// </summary>
-	/// <param name="sex">ĞÔ±ğÃ¶¾Ù</param>
-	/// <returns>×Ö·û´®£¬"ÄĞ"»ò"Å®"</returns>
+	/// <param name="sex">æ€§åˆ«æšä¸¾</param>
+	/// <returns>å­—ç¬¦ä¸²ï¼Œ"ç”·"æˆ–"å¥³"</returns>
 	std::string getSexString(SexEnum sex)
 	{
-		return sex ? "Å®" : "ÄĞ";
+		return sex ? "å¥³" : "ç”·";
 	}
 
 
 	/// <summary>
-	/// ÉúÈÕÀàĞÍ£¬ÓÃÓÚ´æ´¢³öÉúÄê¡¢ÔÂ¡¢ÈÕ
+	/// ç”Ÿæ—¥ç±»å‹ï¼Œç”¨äºå­˜å‚¨å‡ºç”Ÿå¹´ã€æœˆã€æ—¥
 	/// </summary>
 	/// <remarks>
-	/// ÓĞÈıÖÖ¹¹Ôìº¯Êı£¬·Ö±ğÓÃÓÚ³õÊ¼»¯¿Õ¶ÔÏó¡¢×Ö·û´®ÈÕÆÚºÍÕûÊıÈÕÆÚ¡£
+	/// æœ‰ä¸‰ç§æ„é€ å‡½æ•°ï¼Œåˆ†åˆ«ç”¨äºåˆå§‹åŒ–ç©ºå¯¹è±¡ã€å­—ç¬¦ä¸²æ—¥æœŸå’Œæ•´æ•°æ—¥æœŸã€‚
 	/// </remarks>
 	class BirthdayClass
 	{
 	public:
 		/// <summary>
-		/// ¿ÕµÄ <see cref="BirthdayClass"/> ¹¹Ôìº¯Êı£¬Ô¤Áô
+		/// ç©ºçš„ <see cref="BirthdayClass"/> æ„é€ å‡½æ•°ï¼Œé¢„ç•™
 		/// </summary>
 		BirthdayClass() {}
 
 
 		/// <summary>
-		/// ³õÊ¼»¯ÉúÈÕ¶ÔÏó
+		/// åˆå§‹åŒ–ç”Ÿæ—¥å¯¹è±¡
 		/// </summary>
-		/// <param name="_birthday">ÉúÈÕ×Ö·û´®£¬¸ñÊ½ÎªYYYY-MM-DD</param>
-		/// <returns>ÎŞ·µ»ØÖµ</returns>
+		/// <param name="_birthday">ç”Ÿæ—¥å­—ç¬¦ä¸²ï¼Œæ ¼å¼ä¸ºYYYY-MM-DD</param>
+		/// <returns>æ— è¿”å›å€¼</returns>
 		/// <remarks>
-		/// ´Ëº¯ÊıÓÃÓÚ½«YYYY-MM-DD¸ñÊ½µÄ×Ö·û´®ÈÕÆÚ½âÎöÎªÄê¡¢ÔÂ¡¢ÈÕ¡£
+		/// æ­¤å‡½æ•°ç”¨äºå°†YYYY-MM-DDæ ¼å¼çš„å­—ç¬¦ä¸²æ—¥æœŸè§£æä¸ºå¹´ã€æœˆã€æ—¥ã€‚
 		/// </remarks>
 		BirthdayClass(std::string _birthday)
 		{}
 
 
 		/// <summary>
-		/// ³õÊ¼»¯ÉúÈÕ¶ÔÏó
+		/// åˆå§‹åŒ–ç”Ÿæ—¥å¯¹è±¡
 		/// </summary>
-		/// <param name="_birthday">ÉúÈÕÕûÊı£¬¸ñÊ½ÎªYYYYMMDD</param>
-		/// <returns>ÎŞ·µ»ØÖµ</returns>
+		/// <param name="_birthday">ç”Ÿæ—¥æ•´æ•°ï¼Œæ ¼å¼ä¸ºYYYYMMDD</param>
+		/// <returns>æ— è¿”å›å€¼</returns>
 		/// <remarks>
-		/// ´Ëº¯ÊıÓÃÓÚ½«YYYYMMDD¸ñÊ½µÄÕûÊıÈÕÆÚ½âÎöÎªÄê¡¢ÔÂ¡¢ÈÕ¡£
+		/// æ­¤å‡½æ•°ç”¨äºå°†YYYYMMDDæ ¼å¼çš„æ•´æ•°æ—¥æœŸè§£æä¸ºå¹´ã€æœˆã€æ—¥ã€‚
 		/// </remarks>
 		BirthdayClass(int _birthday)
 		{
@@ -80,38 +73,72 @@ namespace FamilyInfo
 		int year, month, day;
 	};
 	/// <summary>
-	/// ÈË¶ÔÏó º¬ÓĞÒ»¸öid¡¢ĞÕÃû¡¢ÉúÈÕ¡¢ĞÔ±ğ
+	/// äººå¯¹è±¡ å«æœ‰ä¸€ä¸ªidã€å§“åã€ç”Ÿæ—¥ã€æ€§åˆ«
 	/// </summary>
 	/// <remarks>
-	/// »ù±¾¶ÔÏó£¬ÓÃÓÚ´æ´¢¼ÒÍ¥³ÉÔ±µÄ»ù±¾ĞÅÏ¢¡£
+	/// åŸºæœ¬å¯¹è±¡ï¼Œç”¨äºå­˜å‚¨å®¶åº­æˆå‘˜çš„åŸºæœ¬ä¿¡æ¯ã€‚
 	/// </remarks>
 	class Person
 	{
+	private:
 		/// <summary>
-		/// ¶ÔÏóID±äÁ¿£¬intÀàĞÍ
-		/// Ä¿Ç°Ïë²»µ½Ê²Ã´ÓÃ£¬ÏÈÁô×Å°É
+		/// å¯¹è±¡IDå˜é‡ï¼Œintç±»å‹
+		/// ç›®å‰æƒ³ä¸åˆ°ä»€ä¹ˆç”¨ï¼Œå…ˆç•™ç€å§
 		/// </summary>
 		int id;
 		/// <summary>
-		/// ¶ÔÏóĞÕÃû±äÁ¿£¬stringÀàĞÍ
+		/// å¯¹è±¡å§“åå˜é‡ï¼Œstringç±»å‹
 		/// </summary>
 		std::string name;
 		/// <summary>
-		/// ÉúÈÕ±äÁ¿£¬×Ô¶¨ÒåbirthdayÀàĞÍ£¬¶ÔÏópublic±äÁ¿»ñµÃ³öÉúÄêÔÂÈÕ
+		/// ç”Ÿæ—¥å˜é‡ï¼Œè‡ªå®šä¹‰birthdayç±»å‹ï¼Œå¯¹è±¡publicå˜é‡è·å¾—å‡ºç”Ÿå¹´æœˆæ—¥
 		/// </summary>
 		BirthdayClass birthday;
 		/// <summary>
-		/// ĞÔ±ğÃ¶¾Ù£¬0ÄĞ 1Å®  <code>getSexString(sex)</code>»ñµÃ×Ö·û´®
+		/// æ€§åˆ«æšä¸¾ï¼Œ0ç”· 1å¥³  <code>getSexString(sex)</code>è·å¾—å­—ç¬¦ä¸²
 		/// </summary>
 		SexEnum sex;
-		static int last_id;
-	public:
 		/// <summary>
-		/// ¹¹Ôì <see cref="Person"/> class.
+		/// å¹´é¾„ï¼Œè·å–å¹´é¾„æ—¶è‡ªåŠ¨è®¡ç®—
 		/// </summary>
-		/// <param name="_name">ĞÕÃû.</param>
-		/// <param name="_birthday">ÉúÈÕ£¬stringÀàĞÍ.</param>
-		/// <param name="sex">ĞÔ±ğ.</param>
+		int age;
+	public:
+
+		//å„ç§get
+		int getId() const { return id; }
+		std::string getName() const { return name; }
+		BirthdayClass getBirthday() const { return birthday; }
+		std::string getBirthdayString() const { return std::to_string(birthday.year) + "-" + std::to_string(birthday.month) + "-" + std::to_string(birthday.day); }
+		std::string getSex() const { return getSexString(sex); }
+		int getAge() {
+			boost::gregorian::date today = boost::gregorian::day_clock::local_day();
+			age = today.year() - birthday.year;
+			if (today.month() < birthday.month || (today.month() == birthday.month && today.day() < birthday.day)) {
+				age--;
+			}
+			return age;
+		}
+
+		/// <summary>
+		/// ä¸Šä¸€ä¸ªidï¼Œç”¨äºç”Ÿæˆæ–°çš„id
+		/// </summary>
+		static int last_id;
+		json toJson()
+		{
+			json j;
+			j["id"] = id;
+			j["name"] = name;
+			j["birthday"] = std::to_string(birthday.year) + "-" + std::to_string(birthday.month) + "-" + std::to_string(birthday.day);
+			j["sex"] = getSexString(sex);
+			return j;
+		}
+
+		/// <summary>
+		/// æ„é€  <see cref="Person"/> class.
+		/// </summary>
+		/// <param name="_name">å§“å.</param>
+		/// <param name="_birthday">ç”Ÿæ—¥ï¼Œstringç±»å‹.</param>
+		/// <param name="sex">æ€§åˆ«.</param>
 		Person(std::string _name, std::string _birthday, SexEnum sex)
 		{
 			this->name = _name;
@@ -122,11 +149,11 @@ namespace FamilyInfo
 
 
 		/// <summary>
-		/// ¹¹Ôì <see cref="Person"/> class.
+		/// æ„é€  <see cref="Person"/> class.
 		/// </summary>
-		/// <param name="_name">ĞÕÃû.</param>
-		/// <param name="_birthday">ÉúÈÕ£¬stringÀàĞÍ.</param>
-		/// <param name="sex">ĞÔ±ğ.</param>
+		/// <param name="_name">å§“å.</param>
+		/// <param name="_birthday">ç”Ÿæ—¥ï¼Œstringç±»å‹.</param>
+		/// <param name="sex">æ€§åˆ«.</param>
 		Person(std::string _name, int _birthday, SexEnum sex)
 		{
 			this->name = _name;
@@ -135,9 +162,10 @@ namespace FamilyInfo
 			this->id = ++last_id;
 		}
 
+		Person() {};
 
 		/// <summary>
-		/// see cref="Person"/> µÄÒ»¸öÎö¹¹º¯Êı£¬ÊÍ·Å¶ÔÏóÕ¼ÓÃµÄÄÚ´æ
+		/// see cref="Person"/> çš„ä¸€ä¸ªææ„å‡½æ•°ï¼Œé‡Šæ”¾å¯¹è±¡å ç”¨çš„å†…å­˜
 		/// </summary>
 		~Person() {}
 	};

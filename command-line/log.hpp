@@ -58,9 +58,6 @@ namespace FamilyInfo::Log
 		if (level <= LogLevel::ERROR) {
 			std::cerr << line;
 		}
-		else {
-			std::cout << line;
-		}
 
 		// 输出到文件
 		if (g_logFile.is_open()) {

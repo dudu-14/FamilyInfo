@@ -1,2 +1,27 @@
-vision 1.0
-
+{
+    "app": {
+        "name": "家庭信息管理系统",
+        "version": "1.0.0"
+    },
+    "behavior": {
+        "auto_backup": true,
+        "backup_interval_days": 7,
+        "confirm_on_delete": true
+    },
+    "display": {
+        "date_format": "YYYY-MM-DD",
+        "sort_by": "name",
+        "sort_order": "asc"
+    },
+    "logging": {
+        "level": 3,
+        "output_to_console": true,
+        "output_to_file": true
+    },
+    "paths": {
+        "backup_dir": "data/backup/",
+        "data_file": "data/family_data.json",
+        "debug_log_file": "logs/debug.log",
+        "log_file": "logs/system.log"
+    }
+}

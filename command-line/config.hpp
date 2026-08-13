@@ -63,17 +63,15 @@ namespace FamilyInfo::Config
 		bool autoBackup = true;
 		int backupIntervalDays = 7;
 		bool confirmOnDelete = true;
+		// number
+		int last_id = 0;
 	};
 
 	/// <summary>加载配置，如果文件不存在则使用默认值并创建</summary>
 	inline AppConfig loadConfig(const std::filesystem::path& configPath = "data/config.json") {
 		AppConfig cfg;
 
-		if (!std::filesystem::exists(configPath)) {
-			// 目录不存在则创建
-			std::filesystem::create_directories(configPath.parent_path());
-
-			// 创建默认配置文件（写入 JSON）
+		auto writeDefaultConfig = [&]() {
 			json defaultJson = {
 				{"app", {{"name", "家庭信息管理系统"}, {"version", "1.0.0"}}},
 				{"paths", {
@@ -96,39 +94,70 @@ namespace FamilyInfo::Config
 					{"auto_backup", cfg.autoBackup},
 					{"backup_interval_days", cfg.backupIntervalDays},
 					{"confirm_on_delete", cfg.confirmOnDelete}
+				}},
+				{"number", {
+					{"last_id", cfg.last_id}
 				}}
 			};
+			if (!configPath.parent_path().empty()) {
+				std::filesystem::create_directories(configPath.parent_path());
+			}
 			std::ofstream file(configPath);
 			file << std::setw(4) << defaultJson;
+		};
+
+		if (!std::filesystem::exists(configPath)) {
+			writeDefaultConfig();
 			return cfg; // 返回默认值
 		}
 
 		// 文件存在，读取并解析
 		std::ifstream file(configPath);
-		json j;
-		file >> j;
+		if (!file.is_open()) {
+			std::cerr << "[ERROR] 无法打开配置文件: " << configPath << std::endl;
+			writeDefaultConfig();
+			return cfg;
+		}
 
-		// 如果json哪个值不存在就使用默认值
-		//paths
-		cfg.dataFile = j.value("paths", json()).value("data_file", cfg.dataFile);
-		cfg.logFile = j.value("paths", json()).value("log_file", cfg.logFile);
-		cfg.debugLogFile = j.value("paths", json()).value("debug_log_file", cfg.debugLogFile);
-		cfg.backupDir = j.value("paths", json()).value("backup_dir", cfg.backupDir);
-		//logging
-		auto logObj = j.value("logging", json());
-		cfg.logLevel = logObj.value("level", cfg.logLevel);
-		cfg.logToConsole = logObj.value("output_to_console", cfg.logToConsole);
-		cfg.logToFile = logObj.value("output_to_file", cfg.logToFile);
-		//display
-		auto dispObj = j.value("display", json());
-		cfg.dateFormat = dispObj.value("date_format", cfg.dateFormat);
-		cfg.sortBy = dispObj.value("sort_by", cfg.sortBy);
-		cfg.sortOrder = dispObj.value("sort_order", cfg.sortOrder);
-		// behavior
-		auto behObj = j.value("behavior", json());
-		cfg.autoBackup = behObj.value("auto_backup", cfg.autoBackup);
-		cfg.backupIntervalDays = behObj.value("backup_interval_days", cfg.backupIntervalDays);
-		cfg.confirmOnDelete = behObj.value("confirm_on_delete", cfg.confirmOnDelete);
+		try {
+			json j;
+			file >> j;
+
+			// 如果json哪个值不存在就使用默认值
+			//paths
+			cfg.dataFile = j.value("paths", json()).value("data_file", cfg.dataFile);
+			cfg.logFile = j.value("paths", json()).value("log_file", cfg.logFile);
+			cfg.debugLogFile = j.value("paths", json()).value("debug_log_file", cfg.debugLogFile);
+			cfg.backupDir = j.value("paths", json()).value("backup_dir", cfg.backupDir);
+			//logging
+			auto logObj = j.value("logging", json());
+			cfg.logLevel = logObj.value("level", cfg.logLevel);
+			cfg.logToConsole = logObj.value("output_to_console", cfg.logToConsole);
+			cfg.logToFile = logObj.value("output_to_file", cfg.logToFile);
+			//display
+			auto dispObj = j.value("display", json());
+			cfg.dateFormat = dispObj.value("date_format", cfg.dateFormat);
+			cfg.sortBy = dispObj.value("sort_by", cfg.sortBy);
+			cfg.sortOrder = dispObj.value("sort_order", cfg.sortOrder);
+			// behavior
+			auto behObj = j.value("behavior", json());
+			cfg.autoBackup = behObj.value("auto_backup", cfg.autoBackup);
+			cfg.backupIntervalDays = behObj.value("backup_interval_days", cfg.backupIntervalDays);
+			cfg.confirmOnDelete = behObj.value("confirm_on_delete", cfg.confirmOnDelete);
+			// number
+			auto numObj = j.value("number", json());
+			cfg.last_id = numObj.value("last_id", cfg.last_id);
+		}
+		catch (const json::parse_error& e) {
+			std::cerr << "[ERROR] 配置文件 JSON 解析失败: " << e.what() << std::endl;
+			writeDefaultConfig();
+			return cfg;
+		}
+		catch (const std::exception& e) {
+			std::cerr << "[ERROR] 读取配置文件失败: " << e.what() << std::endl;
+			writeDefaultConfig();
+			return cfg;
+		}
 
 		return cfg;
 	}
