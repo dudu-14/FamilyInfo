@@ -1,8 +1,9 @@
 // config.hpp
 #pragma once
 #include <filesystem>
-#include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include "family.hpp"
 #include "json.hpp"
 #include "log.hpp"
@@ -67,43 +68,75 @@ namespace FamilyInfo::Config
 		int last_id = 0;
 	};
 
+	/// <summary>
+	/// 将配置结构体转换为JSON对象
+	/// </summary>
+	/// <param name="cfg">配置结构体</param>
+	/// <returns>JSON对象</returns>
+	inline json toJson(const AppConfig& cfg)
+	{
+		json j = {
+			{"app", {{"name", "家庭信息管理系统"}, {"version", "1.0.0"}}},
+			{"paths", {
+				{"data_file", cfg.dataFile},
+				{"log_file", cfg.logFile},
+				{"debug_log_file", cfg.debugLogFile},
+				{"backup_dir", cfg.backupDir}
+			}},
+			{"logging", {
+				{"level", cfg.logLevel},
+				{"output_to_console", cfg.logToConsole},
+				{"output_to_file", cfg.logToFile}
+			}},
+			{"display", {
+				{"date_format", cfg.dateFormat},
+				{"sort_by", cfg.sortBy},
+				{"sort_order", cfg.sortOrder}
+			}},
+			{"behavior", {
+				{"auto_backup", cfg.autoBackup},
+				{"backup_interval_days", cfg.backupIntervalDays},
+				{"confirm_on_delete", cfg.confirmOnDelete}
+			}},
+			{"number", {
+				{"last_id", cfg.last_id}
+			}}
+		};
+		return j;
+	}
+
+	/// <summary>
+	/// 保存配置到文件
+	/// </summary>
+	/// <param name="cfg">配置结构体</param>
+	/// <param name="configPath">配置文件路径</param>
+	/// <returns>成功返回true，失败返回false</returns>
+	inline bool saveConfig(const AppConfig& cfg, const std::filesystem::path& configPath = "data/config.json")
+	{
+		try {
+			if (!configPath.parent_path().empty()) {
+				std::filesystem::create_directories(configPath.parent_path());
+			}
+			std::ofstream file(configPath);
+			if (!file.is_open()) {
+				std::cerr << "[ERROR] 无法打开配置文件进行写入: " << configPath << std::endl;
+				return false;
+			}
+			file << std::setw(4) << toJson(cfg);
+			return true;
+		}
+		catch (const std::exception& e) {
+			std::cerr << "[ERROR] 保存配置文件失败: " << e.what() << std::endl;
+			return false;
+		}
+	}
+
 	/// <summary>加载配置，如果文件不存在则使用默认值并创建</summary>
 	inline AppConfig loadConfig(const std::filesystem::path& configPath = "data/config.json") {
 		AppConfig cfg;
 
 		auto writeDefaultConfig = [&]() {
-			json defaultJson = {
-				{"app", {{"name", "家庭信息管理系统"}, {"version", "1.0.0"}}},
-				{"paths", {
-					{"data_file", cfg.dataFile},
-					{"log_file", cfg.logFile},
-					{"debug_log_file", cfg.debugLogFile},
-					{"backup_dir", cfg.backupDir}
-				}},
-				{"logging", {
-					{"level", 3},
-					{"output_to_console", cfg.logToConsole},
-					{"output_to_file", cfg.logToFile}
-				}},
-				{"display", {
-					{"date_format", cfg.dateFormat},
-					{"sort_by", cfg.sortBy},
-					{"sort_order", cfg.sortOrder}
-				}},
-				{"behavior", {
-					{"auto_backup", cfg.autoBackup},
-					{"backup_interval_days", cfg.backupIntervalDays},
-					{"confirm_on_delete", cfg.confirmOnDelete}
-				}},
-				{"number", {
-					{"last_id", cfg.last_id}
-				}}
-			};
-			if (!configPath.parent_path().empty()) {
-				std::filesystem::create_directories(configPath.parent_path());
-			}
-			std::ofstream file(configPath);
-			file << std::setw(4) << defaultJson;
+			saveConfig(cfg, configPath);
 		};
 
 		if (!std::filesystem::exists(configPath)) {

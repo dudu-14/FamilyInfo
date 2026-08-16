@@ -3,8 +3,13 @@
 #include "family.hpp"
 #include "log.hpp"
 #include "edit.hpp"
+#include <algorithm>
+#include <cstdio>
+#include <filesystem>
 #include <iostream>
+#include <limits>
 #include <string>
+#include <vector>
 
 using namespace FamilyInfo;
 Config::AppConfig g_config; // 全局配置对象
@@ -16,7 +21,14 @@ void pause()
 	std::cin.get();
 }
 
-void readFamilyData();
+/// <summary>
+/// 清空输入缓冲区，避免残留的换行符或非法输入影响后续读取
+/// </summary>
+void clearInput()
+{
+	std::cin.clear();
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
 
 /// <summary>
 /// 程序主入口
@@ -35,6 +47,14 @@ int main()
 		// 主循环
 
 		Edit::loadPersonData(g_familyMembers, g_config.dataFile); // 每次循环都加载数据，确保数据最新
+		g_config.last_id = last_id; // 同步配置中的last_id
+
+		// 自动备份检查
+		if (g_config.autoBackup && std::filesystem::exists(g_config.dataFile)
+			&& Edit::needAutoBackup(g_config.backupDir, g_config.backupIntervalDays))
+		{
+			Edit::backupPersonData(g_config.dataFile, g_config.backupDir);
+		}
 
 		Log::logInfo("进入主循环，当前家庭成员数量: " + std::to_string(g_familyMembers.size()));
 		cout << "1. 添加家庭成员\n";
@@ -47,20 +67,27 @@ int main()
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
-		scanf("%d", &s);
-
-		if (!s) 
+		if (scanf("%d", &s) != 1) // 输入的不是数字，清空缓冲区后重新输入
 		{
-			Edit::writePersonData(g_familyMembers, g_config.dataFile); // 保存数据
-			//退出程序
+			while (getchar() != '\n');
+			cout << "输入无效，请输入数字。\n";
+			continue;
+		}
+
+		if (!s)
+		{
+			// 退出程序
 			cout << "你确认要退出吗？(y/n): ";
 			char c;
-			scanf("%c", &c);
+			while (getchar() != '\n'); // 清空缓冲区，防止读到上次输入留下的换行符
+			c = getchar();
 			if (c == 'n' || c == 'N')
 			{
 				continue;
 			}
-			exit(0);
+			Config::saveConfig(g_config); // 保存配置（含last_id）
+			Edit::writePersonData(g_familyMembers, g_config.dataFile); // 保存数据
+			break;
 		}
 		if (s == 1)
 		{
@@ -73,11 +100,30 @@ int main()
 			cin >> birthday;
 			cout << "请输入性别 (0-男, 1-女): ";
 			int sexInt;
-			cin >> sexInt;
-			Person p(name, birthday, SexEnum(sexInt));
-			g_familyMembers.push_back(p);
-			cout << "家庭成员添加成功: " << name << endl;
-			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			if (!(cin >> sexInt))
+			{
+				clearInput();
+				cout << "性别输入无效，添加失败。\n";
+				continue;
+			}
+			if (sexInt != 0 && sexInt != 1)
+			{
+				cout << "性别输入无效，添加失败。\n";
+				continue;
+			}
+			try
+			{
+				Person p(name, birthday, SexEnum(sexInt));
+				g_familyMembers.push_back(p);
+				cout << "家庭成员添加成功: " << name << endl;
+				Edit::writePersonData(g_familyMembers, g_config.dataFile);
+				g_config.last_id = last_id; // 更新配置中的last_id
+				Config::saveConfig(g_config);
+			}
+			catch (const std::exception& e)
+			{
+				cout << "添加失败: " << e.what() << endl;
+			}
 			continue;
 		}
 		if (s == 2)
@@ -89,7 +135,23 @@ int main()
 				cout << "没有家庭成员数据。\n";
 				continue;
 			}
-			for (auto& person : g_familyMembers)
+			std::vector<Person> displayList = g_familyMembers; // 拷贝一份用于排序，不影响原数据
+			// 根据配置排序
+			if (g_config.sortBy == "id")
+			{
+				std::sort(displayList.begin(), displayList.end(),
+					[](const Person& a, const Person& b) { return a.getId() < b.getId(); });
+			}
+			else
+			{
+				std::sort(displayList.begin(), displayList.end(),
+					[](const Person& a, const Person& b) { return a.getName() < b.getName(); });
+			}
+			if (g_config.sortOrder == "desc")
+			{
+				std::reverse(displayList.begin(), displayList.end());
+			}
+			for (auto& person : displayList)
 			{
 				cout << "ID: " << person.getId()
 					<< ", 姓名: " << person.getName()
@@ -98,6 +160,267 @@ int main()
 					<< ", 性别: " << person.getSex()
 					<< endl;
 			}
+			continue;
+		}
+		if (s == 3)
+		{
+			// 删除家庭成员
+			cout << "请输入要删除的家庭成员ID: ";
+			int delId;
+			if (!(cin >> delId))
+			{
+				clearInput();
+				cout << "ID输入无效。\n";
+				continue;
+			}
+			auto it = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+				[delId](const Person& p) { return p.getId() == delId; });
+			if (it == g_familyMembers.end())
+			{
+				cout << "未找到ID为 " << delId << " 的家庭成员。\n";
+				continue;
+			}
+			cout << "将删除: ID: " << it->getId() << ", 姓名: " << it->getName()
+				<< ", 生日: " << it->getBirthdayString() << endl;
+			if (g_config.confirmOnDelete) // 根据配置决定是否需要确认
+			{
+				cout << "你确认要删除吗？(y/n): ";
+				char c;
+				cin >> c;
+				if (c == 'n' || c == 'N')
+				{
+					cout << "已取消删除。\n";
+					continue;
+				}
+			}
+			g_familyMembers.erase(it);
+			cout << "家庭成员删除成功: " << delId << endl;
+			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			continue;
+		}
+		if (s == 4)
+		{
+			// 编辑家庭成员
+			cout << "请输入要编辑的家庭成员ID: ";
+			int editId;
+			if (!(cin >> editId))
+			{
+				clearInput();
+				cout << "ID输入无效。\n";
+				continue;
+			}
+			auto it = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+				[editId](const Person& p) { return p.getId() == editId; });
+			if (it == g_familyMembers.end())
+			{
+				cout << "未找到ID为 " << editId << " 的家庭成员。\n";
+				continue;
+			}
+			while (1)
+			{
+				// 编辑子菜单
+				cout << "======编辑家庭成员======\n";
+				cout << "当前信息: 姓名: " << it->getName() << ", 生日: " << it->getBirthdayString()
+					<< ", 性别: " << it->getSex() << endl;
+				cout << "1. 修改姓名\n";
+				cout << "2. 修改生日\n";
+				cout << "3. 修改性别\n";
+				cout << "0. 返回\n";
+				cout << "请选择操作: ";
+				int opt;
+				if (!(cin >> opt))
+				{
+					clearInput();
+					cout << "输入无效，请输入数字。\n";
+					continue;
+				}
+				if (!opt)
+				{
+					break;
+				}
+				if (opt == 1)
+				{
+					// 修改姓名
+					cout << "请输入新的姓名: ";
+					string newName;
+					cin >> newName;
+					it->setName(newName);
+					cout << "姓名修改成功。\n";
+				}
+				else if (opt == 2)
+				{
+					// 修改生日
+					cout << "请输入新的生日 (YYYY-MM-DD): ";
+					string newBirthday;
+					cin >> newBirthday;
+					try
+					{
+						it->setBirthday(newBirthday);
+						cout << "生日修改成功。\n";
+					}
+					catch (const std::exception& e)
+					{
+						cout << "生日修改失败: " << e.what() << endl;
+					}
+				}
+				else if (opt == 3)
+				{
+					// 修改性别
+					cout << "请输入新的性别 (0-男, 1-女): ";
+					int newSex;
+					if (!(cin >> newSex))
+					{
+						clearInput();
+						cout << "性别输入无效。\n";
+						continue;
+					}
+					if (newSex != 0 && newSex != 1)
+					{
+						cout << "性别输入无效。\n";
+					}
+					else
+					{
+						it->setSex(SexEnum(newSex));
+						cout << "性别修改成功。\n";
+					}
+				}
+			}
+			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			cout << "家庭成员信息已保存。\n";
+			continue;
+		}
+		if (s == 5)
+		{
+			// 备份数据
+			if (Edit::backupPersonData(g_config.dataFile, g_config.backupDir))
+			{
+				cout << "备份成功，备份目录: " << g_config.backupDir << endl;
+			}
+			else
+			{
+				cout << "备份失败。\n";
+			}
+			continue;
+		}
+		if (s == 6)
+		{
+			// 恢复数据
+			std::vector<std::string> backups = Edit::listBackups(g_config.backupDir);
+			if (backups.empty())
+			{
+				cout << "没有找到任何备份文件。\n";
+				continue;
+			}
+			cout << "======备份列表======\n";
+			for (size_t i = 0; i < backups.size(); i++)
+			{
+				cout << i + 1 << ". " << backups[i] << endl;
+			}
+			cout << "请选择要恢复的备份 (0-返回): ";
+			int choice;
+			if (!(cin >> choice))
+			{
+				clearInput();
+				cout << "选择无效。\n";
+				continue;
+			}
+			if (choice <= 0 || choice > (int)backups.size())
+			{
+				continue;
+			}
+			cout << "恢复后当前数据将被覆盖，你确认吗？(y/n): ";
+			char c;
+			cin >> c;
+			if (c == 'n' || c == 'N')
+			{
+				cout << "已取消恢复。\n";
+				continue;
+			}
+			if (Edit::restorePersonData(g_config.dataFile, backups[choice - 1]))
+			{
+				Edit::loadPersonData(g_familyMembers, g_config.dataFile); // 重新加载数据
+				cout << "数据恢复成功。\n";
+			}
+			else
+			{
+				cout << "数据恢复失败。\n";
+			}
+			continue;
+		}
+		if (s == 7)
+		{
+			// 设置
+			while (1)
+			{
+				// 设置子菜单
+				cout << "======设置======\n";
+				cout << "1. 删除前确认 (当前: " << (g_config.confirmOnDelete ? "开" : "关") << ")\n";
+				cout << "2. 自动备份 (当前: " << (g_config.autoBackup ? "开" : "关") << ")\n";
+				cout << "3. 控制台日志输出 (当前: " << (g_config.logToConsole ? "开" : "关") << ")\n";
+				cout << "4. 日志级别 (当前: " << g_config.logLevel << ")\n";
+				cout << "5. 保存设置并返回\n";
+				cout << "0. 返回\n";
+				cout << "请选择操作: ";
+				int opt;
+				if (!(cin >> opt))
+				{
+					clearInput();
+					cout << "输入无效，请输入数字。\n";
+					continue;
+				}
+				if (!opt)
+				{
+					break;
+				}
+				if (opt == 1)
+				{
+					// 切换删除前确认
+					g_config.confirmOnDelete = !g_config.confirmOnDelete;
+					cout << "删除前确认已" << (g_config.confirmOnDelete ? "开启" : "关闭") << "。\n";
+				}
+				else if (opt == 2)
+				{
+					// 切换自动备份
+					g_config.autoBackup = !g_config.autoBackup;
+					cout << "自动备份已" << (g_config.autoBackup ? "开启" : "关闭") << "。\n";
+				}
+				else if (opt == 3)
+				{
+					// 切换控制台日志输出
+					g_config.logToConsole = !g_config.logToConsole;
+					cout << "控制台日志输出已" << (g_config.logToConsole ? "开启" : "关闭") << "。\n";
+				}
+				else if (opt == 4)
+				{
+					// 修改日志级别
+					cout << "请输入新的日志级别 (0-FATAL, 1-ERROR, 2-WARNING, 3-INFO, 4-DEBUG): ";
+					int newLevel;
+					if (!(cin >> newLevel))
+					{
+						clearInput();
+						cout << "日志级别输入无效。\n";
+						continue;
+					}
+					if (newLevel < 0 || newLevel > 4)
+					{
+						cout << "日志级别无效。\n";
+					}
+					else
+					{
+						g_config.logLevel = newLevel;
+						Log::setLogLevel(Log::configToLogLevel(newLevel));
+						cout << "日志级别修改成功。\n";
+					}
+				}
+				else if (opt == 5)
+				{
+					// 保存设置
+					Config::saveConfig(g_config);
+					cout << "设置已保存。\n";
+					break;
+				}
+			}
+			continue;
 		}
 	}
 	return 0;
