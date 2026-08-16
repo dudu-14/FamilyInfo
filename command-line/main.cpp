@@ -4,6 +4,7 @@
 #include "log.hpp"
 #include "edit.hpp"
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <filesystem>
 #include <iostream>
@@ -64,6 +65,7 @@ int main()
 		cout << "5. 备份数据\n";
 		cout << "6. 恢复数据\n";
 		cout << "7. 设置\n";
+		cout << "8. 搜索家庭成员\n";
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
@@ -463,6 +465,82 @@ int main()
 					cout << "设置已保存。\n";
 					break;
 				}
+			}
+			continue;
+		}
+		if (s == 8)
+		{
+			// 搜索家庭成员
+			cout << "======搜索家庭成员======\n";
+			cout << "1. 按姓名搜索\n";
+			cout << "2. 按ID搜索\n";
+			cout << "请选择搜索方式: ";
+			int searchType;
+			if (!(cin >> searchType))
+			{
+				clearInput();
+				cout << "输入无效。\n";
+				continue;
+			}
+			if (searchType == 1)
+			{
+				// 按姓名搜索（包含关键字即匹配，不区分大小写）
+				cout << "请输入姓名关键字: ";
+				string keyword;
+				cin >> keyword;
+				// 统一转小写，实现不区分大小写的匹配
+				std::transform(keyword.begin(), keyword.end(), keyword.begin(), ::tolower);
+				bool found = false;
+				for (auto& person : g_familyMembers)
+				{
+					std::string name = person.getName();
+					std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+					if (name.find(keyword) != std::string::npos)
+					{
+						cout << "ID: " << person.getId()
+							<< ", 姓名: " << person.getName()
+							<< ", 生日: " << person.getBirthdayString()
+							<< ", 年龄: " << person.getAge()
+							<< ", 性别: " << person.getSex()
+							<< endl;
+						found = true;
+					}
+				}
+				if (!found)
+				{
+					cout << "未找到姓名包含\"" << keyword << "\"的家庭成员。\n";
+				}
+			}
+			else if (searchType == 2)
+			{
+				// 按ID搜索
+				cout << "请输入ID: ";
+				int searchId;
+				if (!(cin >> searchId))
+				{
+					clearInput();
+					cout << "ID输入无效。\n";
+					continue;
+				}
+				auto it = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+					[searchId](const Person& p) { return p.getId() == searchId; });
+				if (it == g_familyMembers.end())
+				{
+					cout << "未找到ID为 " << searchId << " 的家庭成员。\n";
+				}
+				else
+				{
+					cout << "ID: " << it->getId()
+						<< ", 姓名: " << it->getName()
+						<< ", 生日: " << it->getBirthdayString()
+						<< ", 年龄: " << it->getAge()
+						<< ", 性别: " << it->getSex()
+						<< endl;
+				}
+			}
+			else
+			{
+				cout << "搜索方式无效。\n";
 			}
 			continue;
 		}
