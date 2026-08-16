@@ -181,6 +181,43 @@ namespace FamilyInfo::Edit
 	}
 
 	/// <summary>
+	/// 导出家庭成员数据到CSV文件
+	/// </summary>
+	/// <param name="persons">家庭成员列表，const std::vector&lt;Person&gt;&amp;</param>
+	/// <param name="filePath">导出文件路径，const std::string&amp;</param>
+	/// <returns>成功返回true，失败返回false</returns>
+	/// <remarks>
+	/// 文件带UTF-8 BOM并使用CRLF换行，方便Excel直接打开识别中文。
+	/// </remarks>
+	bool exportPersonData(const std::vector<Person>& persons, const std::string& filePath = "data/export.csv") {
+		FamilyInfo::Log::logInfo("正在导出家庭成员数据到CSV文件: " + filePath);
+		try {
+			if (!std::filesystem::path(filePath).parent_path().empty()) {
+				std::filesystem::create_directories(std::filesystem::path(filePath).parent_path());
+			}
+			std::ofstream file(filePath, std::ios::binary); // 二进制模式，避免换行符转换影响BOM
+			if (!file.is_open()) {
+				std::cerr << "[ERROR] 无法打开文件进行导出: " << filePath << std::endl;
+				FamilyInfo::Log::logError("无法打开文件进行导出: " + filePath);
+				return false;
+			}
+			file << "\xEF\xBB\xBF"; // UTF-8 BOM
+			file << "ID,姓名,生日,性别,年龄\r\n";
+			for (const auto& person : persons) {
+				file << person.getId() << "," << person.getName() << "," << person.getBirthdayString()
+					<< "," << person.getSex() << "," << person.getAge() << "\r\n";
+			}
+			FamilyInfo::Log::logInfo("家庭成员数据已成功导出: " + filePath);
+			return true;
+		}
+		catch (const std::exception& e) {
+			std::cerr << "[ERROR] 导出失败: " << e.what() << std::endl;
+			FamilyInfo::Log::logError("导出失败: " + std::string(e.what()));
+			return false;
+		}
+	}
+
+	/// <summary>
 	/// 检查是否需要自动备份
 	/// </summary>
 	/// <param name="backupDir">备份目录路径，const std::string&</param>

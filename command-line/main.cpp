@@ -68,6 +68,7 @@ int main()
 		cout << "7. 设置\n";
 		cout << "8. 搜索家庭成员\n";
 		cout << "9. 统计信息\n";
+		cout << "10. 导出CSV\n";
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
@@ -588,6 +589,19 @@ int main()
 			cout << "平均年龄: " << std::fixed << std::setprecision(1) << avgAge << endl;
 			cout << "最年长: " << oldestName << " (" << oldestAge << "岁)" << endl;
 			cout << "最年幼: " << youngestName << " (" << youngestAge << "岁)" << endl;
+			continue;
+		}
+		if (s == 10)
+		{
+			// 导出CSV
+			if (Edit::exportPersonData(g_familyMembers, "data/export.csv"))
+			{
+				cout << "导出成功，文件: data/export.csv" << endl;
+			}
+			else
+			{
+				cout << "导出失败。\n";
+			}
 			continue;
 		}
 	}
