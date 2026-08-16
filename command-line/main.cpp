@@ -1,12 +1,15 @@
 // main.cpp
+#define WIN32_LEAN_AND_MEAN // 在包含windows.h前定义，避免winsock.h与winsock2.h冲突
 #include "config.hpp"
 #include "family.hpp"
 #include "log.hpp"
 #include "edit.hpp"
 #include "ui.hpp"
+#include "server.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -53,9 +56,25 @@ std::string getPersonName(int id)
 /// <summary>
 /// 程序主入口
 /// </summary>
+/// <param name="argc">参数个数</param>
+/// <param name="argv">参数列表</param>
 /// <returns>退出时返回0</returns>
-int main()
+int main(int argc, char* argv[])
 {
+	// 服务器模式：command-line.exe --server [端口]，供GUI等外部程序通过REST API接入
+	if (argc >= 2 && std::string(argv[1]) == "--server")
+	{
+		int port = 8080;
+		if (argc >= 3)
+		{
+			port = std::atoi(argv[2]);
+		}
+		g_config = Config::loadConfig();
+		Log::initLog(g_config.logFile, g_config.debugLogFile, Log::configToLogLevel(g_config.logLevel));
+		last_id = g_config.last_id; // 初始化全局last_id
+		return Server::runServer(port);
+	}
+
 	using namespace std;
 
 	g_config = Config::loadConfig();
