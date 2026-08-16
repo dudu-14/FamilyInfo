@@ -182,13 +182,13 @@ namespace FamilyInfo
 			return str;
 		}
 		std::string getSex() const { return getSexString(sex); }
-		int getAge() {
+		int getAge() const {
 			boost::gregorian::date today = boost::gregorian::day_clock::local_day();
-			age = today.year() - birthday.year;
+			int currentAge = today.year() - birthday.year;
 			if (today.month() < birthday.month || (today.month() == birthday.month && today.day() < birthday.day)) {
-				age--;
+				currentAge--;
 			}
-			return age;
+			return currentAge;
 		}
 
 		//各种set

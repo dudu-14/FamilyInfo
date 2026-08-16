@@ -142,6 +142,17 @@ int main()
 				std::sort(displayList.begin(), displayList.end(),
 					[](const Person& a, const Person& b) { return a.getId() < b.getId(); });
 			}
+			else if (g_config.sortBy == "age")
+			{
+				std::sort(displayList.begin(), displayList.end(),
+					[](const Person& a, const Person& b) { return a.getAge() < b.getAge(); });
+			}
+			else if (g_config.sortBy == "birthday")
+			{
+				// 生日字符串为YYYY-MM-DD格式，字典序就是时间顺序
+				std::sort(displayList.begin(), displayList.end(),
+					[](const Person& a, const Person& b) { return a.getBirthdayString() < b.getBirthdayString(); });
+			}
 			else
 			{
 				std::sort(displayList.begin(), displayList.end(),
@@ -358,7 +369,9 @@ int main()
 				cout << "2. 自动备份 (当前: " << (g_config.autoBackup ? "开" : "关") << ")\n";
 				cout << "3. 控制台日志输出 (当前: " << (g_config.logToConsole ? "开" : "关") << ")\n";
 				cout << "4. 日志级别 (当前: " << g_config.logLevel << ")\n";
-				cout << "5. 保存设置并返回\n";
+				cout << "5. 修改排序字段 (当前: " << g_config.sortBy << ")\n";
+				cout << "6. 修改排序顺序 (当前: " << g_config.sortOrder << ")\n";
+				cout << "7. 保存设置并返回\n";
 				cout << "0. 返回\n";
 				cout << "请选择操作: ";
 				int opt;
@@ -413,6 +426,37 @@ int main()
 					}
 				}
 				else if (opt == 5)
+				{
+					// 修改排序字段
+					cout << "请选择排序字段 (1-姓名, 2-ID, 3-年龄, 4-生日): ";
+					int field;
+					if (!(cin >> field))
+					{
+						clearInput();
+						cout << "输入无效。\n";
+						continue;
+					}
+					if (field == 2) g_config.sortBy = "id";
+					else if (field == 3) g_config.sortBy = "age";
+					else if (field == 4) g_config.sortBy = "birthday";
+					else g_config.sortBy = "name";
+					cout << "排序字段已修改为: " << g_config.sortBy << endl;
+				}
+				else if (opt == 6)
+				{
+					// 修改排序顺序
+					cout << "请选择排序顺序 (1-升序, 2-降序): ";
+					int order;
+					if (!(cin >> order))
+					{
+						clearInput();
+						cout << "输入无效。\n";
+						continue;
+					}
+					g_config.sortOrder = (order == 2) ? "desc" : "asc";
+					cout << "排序顺序已修改为: " << g_config.sortOrder << endl;
+				}
+				else if (opt == 7)
 				{
 					// 保存设置
 					Config::saveConfig(g_config);
