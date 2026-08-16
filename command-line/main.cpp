@@ -3,6 +3,7 @@
 #include "family.hpp"
 #include "log.hpp"
 #include "edit.hpp"
+#include "ui.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -43,7 +44,7 @@ int main()
 	g_config = Config::loadConfig();
 	Log::initLog(g_config.logFile, g_config.debugLogFile, Log::configToLogLevel(g_config.logLevel));
 	last_id = g_config.last_id; // 初始化全局last_id
-	cout << "======家庭信息管理系统 v1.0.0=====\n";
+	UI::printTitle("======家庭信息管理系统 v1.0.0=====\n");
 	while (1)
 	{
 		// 主循环
@@ -109,33 +110,33 @@ int main()
 			if (!(cin >> sexInt))
 			{
 				clearInput();
-				cout << "性别输入无效，添加失败。\n";
+				UI::printWarn("性别输入无效，添加失败。\n");
 				continue;
 			}
 			if (sexInt != 0 && sexInt != 1)
 			{
-				cout << "性别输入无效，添加失败。\n";
+				UI::printWarn("性别输入无效，添加失败。\n");
 				continue;
 			}
 			try
 			{
 				Person p(name, birthday, SexEnum(sexInt));
 				g_familyMembers.push_back(p);
-				cout << "家庭成员添加成功: " << name << endl;
+				UI::printSuccess("家庭成员添加成功: " + name + "\n");
 				Edit::writePersonData(g_familyMembers, g_config.dataFile);
 				g_config.last_id = last_id; // 更新配置中的last_id
 				Config::saveConfig(g_config);
 			}
 			catch (const std::exception& e)
 			{
-				cout << "添加失败: " << e.what() << endl;
+				UI::printError("添加失败: " + std::string(e.what()) + "\n");
 			}
 			continue;
 		}
 		if (s == 2)
 		{
 			// 显示家庭成员
-			cout << "======家庭成员列表======\n";
+			UI::printTitle("======家庭成员列表======\n");
 			if (g_familyMembers.empty())
 			{
 				cout << "没有家庭成员数据。\n";
@@ -194,7 +195,7 @@ int main()
 				[delId](const Person& p) { return p.getId() == delId; });
 			if (it == g_familyMembers.end())
 			{
-				cout << "未找到ID为 " << delId << " 的家庭成员。\n";
+				UI::printWarn("未找到ID为 " + std::to_string(delId) + " 的家庭成员。\n");
 				continue;
 			}
 			cout << "将删除: ID: " << it->getId() << ", 姓名: " << it->getName()
@@ -211,7 +212,7 @@ int main()
 				}
 			}
 			g_familyMembers.erase(it);
-			cout << "家庭成员删除成功: " << delId << endl;
+			UI::printSuccess("家庭成员删除成功: " + std::to_string(delId) + "\n");
 			Edit::writePersonData(g_familyMembers, g_config.dataFile);
 			continue;
 		}
@@ -230,13 +231,13 @@ int main()
 				[editId](const Person& p) { return p.getId() == editId; });
 			if (it == g_familyMembers.end())
 			{
-				cout << "未找到ID为 " << editId << " 的家庭成员。\n";
+				UI::printWarn("未找到ID为 " + std::to_string(editId) + " 的家庭成员。\n");
 				continue;
 			}
 			while (1)
 			{
 				// 编辑子菜单
-				cout << "======编辑家庭成员======\n";
+				UI::printTitle("======编辑家庭成员======\n");
 				cout << "当前信息: 姓名: " << it->getName() << ", 生日: " << it->getBirthdayString()
 					<< ", 性别: " << it->getSex() << endl;
 				cout << "1. 修改姓名\n";
@@ -262,7 +263,7 @@ int main()
 					string newName;
 					cin >> newName;
 					it->setName(newName);
-					cout << "姓名修改成功。\n";
+					UI::printSuccess("姓名修改成功。\n");
 				}
 				else if (opt == 2)
 				{
@@ -273,7 +274,7 @@ int main()
 					try
 					{
 						it->setBirthday(newBirthday);
-						cout << "生日修改成功。\n";
+						UI::printSuccess("生日修改成功。\n");
 					}
 					catch (const std::exception& e)
 					{
@@ -298,12 +299,12 @@ int main()
 					else
 					{
 						it->setSex(SexEnum(newSex));
-						cout << "性别修改成功。\n";
+						UI::printSuccess("性别修改成功。\n");
 					}
 				}
 			}
 			Edit::writePersonData(g_familyMembers, g_config.dataFile);
-			cout << "家庭成员信息已保存。\n";
+			UI::printSuccess("家庭成员信息已保存。\n");
 			continue;
 		}
 		if (s == 5)
@@ -311,11 +312,11 @@ int main()
 			// 备份数据
 			if (Edit::backupPersonData(g_config.dataFile, g_config.backupDir))
 			{
-				cout << "备份成功，备份目录: " << g_config.backupDir << endl;
+				UI::printSuccess("备份成功，备份目录: " + g_config.backupDir + "\n");
 			}
 			else
 			{
-				cout << "备份失败。\n";
+				UI::printError("备份失败。\n");
 			}
 			continue;
 		}
@@ -328,7 +329,7 @@ int main()
 				cout << "没有找到任何备份文件。\n";
 				continue;
 			}
-			cout << "======备份列表======\n";
+			UI::printTitle("======备份列表======\n");
 			for (size_t i = 0; i < backups.size(); i++)
 			{
 				cout << i + 1 << ". " << backups[i] << endl;
@@ -356,11 +357,11 @@ int main()
 			if (Edit::restorePersonData(g_config.dataFile, backups[choice - 1]))
 			{
 				Edit::loadPersonData(g_familyMembers, g_config.dataFile); // 重新加载数据
-				cout << "数据恢复成功。\n";
+				UI::printSuccess("数据恢复成功。\n");
 			}
 			else
 			{
-				cout << "数据恢复失败。\n";
+				UI::printError("数据恢复失败。\n");
 			}
 			continue;
 		}
@@ -370,7 +371,7 @@ int main()
 			while (1)
 			{
 				// 设置子菜单
-				cout << "======设置======\n";
+				UI::printTitle("======设置======\n");
 				cout << "1. 删除前确认 (当前: " << (g_config.confirmOnDelete ? "开" : "关") << ")\n";
 				cout << "2. 自动备份 (当前: " << (g_config.autoBackup ? "开" : "关") << ")\n";
 				cout << "3. 控制台日志输出 (当前: " << (g_config.logToConsole ? "开" : "关") << ")\n";
@@ -428,7 +429,7 @@ int main()
 					{
 						g_config.logLevel = newLevel;
 						Log::setLogLevel(Log::configToLogLevel(newLevel));
-						cout << "日志级别修改成功。\n";
+						UI::printSuccess("日志级别修改成功。\n");
 					}
 				}
 				else if (opt == 5)
@@ -466,7 +467,7 @@ int main()
 				{
 					// 保存设置
 					Config::saveConfig(g_config);
-					cout << "设置已保存。\n";
+					UI::printSuccess("设置已保存。\n");
 					break;
 				}
 			}
@@ -475,7 +476,7 @@ int main()
 		if (s == 8)
 		{
 			// 搜索家庭成员
-			cout << "======搜索家庭成员======\n";
+			UI::printTitle("======搜索家庭成员======\n");
 			cout << "1. 按姓名搜索\n";
 			cout << "2. 按ID搜索\n";
 			cout << "请选择搜索方式: ";
@@ -512,7 +513,7 @@ int main()
 				}
 				if (!found)
 				{
-					cout << "未找到姓名包含\"" << keyword << "\"的家庭成员。\n";
+					UI::printWarn("未找到姓名包含\"" + keyword + "\"的家庭成员。\n");
 				}
 			}
 			else if (searchType == 2)
@@ -530,7 +531,7 @@ int main()
 					[searchId](const Person& p) { return p.getId() == searchId; });
 				if (it == g_familyMembers.end())
 				{
-					cout << "未找到ID为 " << searchId << " 的家庭成员。\n";
+					UI::printWarn("未找到ID为 " + std::to_string(searchId) + " 的家庭成员。\n");
 				}
 				else
 				{
@@ -551,7 +552,7 @@ int main()
 		if (s == 9)
 		{
 			// 统计信息
-			cout << "======统计信息======\n";
+			UI::printTitle("======统计信息======\n");
 			if (g_familyMembers.empty())
 			{
 				cout << "没有家庭成员数据。\n";
@@ -597,11 +598,11 @@ int main()
 			// 导出CSV
 			if (Edit::exportPersonData(g_familyMembers, "data/export.csv"))
 			{
-				cout << "导出成功，文件: data/export.csv" << endl;
+				UI::printSuccess("导出成功，文件: data/export.csv\n");
 			}
 			else
 			{
-				cout << "导出失败。\n";
+				UI::printError("导出失败。\n");
 			}
 			continue;
 		}
@@ -610,7 +611,7 @@ int main()
 			// 日志管理
 			while (1)
 			{
-				cout << "======日志管理======\n";
+				UI::printTitle("======日志管理======\n");
 				cout << "1. 查看日志（最近30条）\n";
 				cout << "2. 清空日志文件\n";
 				cout << "0. 返回\n";
@@ -636,7 +637,7 @@ int main()
 					}
 					else
 					{
-						cout << "======最近日志======" << endl;
+						UI::printTitle("======最近日志======\n");
 						for (const auto& line : lines)
 						{
 							cout << line << endl;

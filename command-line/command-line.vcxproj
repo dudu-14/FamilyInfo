@@ -147,6 +147,7 @@
     <ClInclude Include="family.hpp" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="log.hpp" />
+    <ClInclude Include="ui.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
