@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cstdio>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -66,6 +67,7 @@ int main()
 		cout << "6. 恢复数据\n";
 		cout << "7. 设置\n";
 		cout << "8. 搜索家庭成员\n";
+		cout << "9. 统计信息\n";
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
@@ -542,6 +544,50 @@ int main()
 			{
 				cout << "搜索方式无效。\n";
 			}
+			continue;
+		}
+		if (s == 9)
+		{
+			// 统计信息
+			cout << "======统计信息======\n";
+			if (g_familyMembers.empty())
+			{
+				cout << "没有家庭成员数据。\n";
+				continue;
+			}
+			int manCount = 0;
+			int womanCount = 0;
+			int ageSum = 0;
+			int oldestAge = -1;
+			int youngestAge = 999;
+			std::string oldestName;
+			std::string youngestName;
+			for (auto& person : g_familyMembers)
+			{
+				int age = person.getAge();
+				if (age < 0) age = 0; // 生日在未来等异常情况按0处理
+				ageSum += age;
+				if (person.getSex() == "男") {
+					manCount++;
+				}
+				else {
+					womanCount++;
+				}
+				if (oldestAge < 0 || age > oldestAge) {
+					oldestAge = age;
+					oldestName = person.getName();
+				}
+				if (age < youngestAge) {
+					youngestAge = age;
+					youngestName = person.getName();
+				}
+			}
+			double avgAge = (double)ageSum / g_familyMembers.size();
+			cout << "家庭成员总数: " << g_familyMembers.size() << endl;
+			cout << "男性人数: " << manCount << ", 女性人数: " << womanCount << endl;
+			cout << "平均年龄: " << std::fixed << std::setprecision(1) << avgAge << endl;
+			cout << "最年长: " << oldestName << " (" << oldestAge << "岁)" << endl;
+			cout << "最年幼: " << youngestName << " (" << youngestAge << "岁)" << endl;
 			continue;
 		}
 	}
