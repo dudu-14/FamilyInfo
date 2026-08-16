@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <vector>
 
 namespace FamilyInfo::Log
 {
@@ -78,5 +79,48 @@ namespace FamilyInfo::Log
 
 
 	inline void setLogLevel(LogLevel level) { g_logLevel = level; }
+
+	/// <summary>
+	/// 读取日志文件内容
+	/// </summary>
+	/// <param name="filePath">日志文件路径</param>
+	/// <param name="maxLines">最多读取的行数，-1表示读取全部</param>
+	/// <returns>日志行列表，std::vector&lt;std::string&gt;</returns>
+	inline std::vector<std::string> readLogLines(const std::string& filePath, int maxLines = -1) {
+		std::vector<std::string> lines;
+		std::ifstream file(filePath);
+		if (!file.is_open()) {
+			return lines;
+		}
+		std::string line;
+		while (std::getline(file, line)) {
+			lines.push_back(line);
+		}
+		// 只保留最后maxLines行
+		if (maxLines > 0 && (int)lines.size() > maxLines) {
+			lines.erase(lines.begin(), lines.begin() + (lines.size() - maxLines));
+		}
+		return lines;
+	}
+
+	/// <summary>
+	/// 清空日志文件
+	/// </summary>
+	/// <param name="filePath">日志文件路径</param>
+	/// <returns>成功返回true，失败返回false</returns>
+	inline bool clearLogFile(const std::string& filePath) {
+		// 先关闭日志流，清空后再重新打开
+		if (g_logFile.is_open()) {
+			g_logFile.close();
+		}
+		std::ofstream file(filePath, std::ios::trunc);
+		if (!file.is_open()) {
+			g_logFile.open(filePath, std::ios::app); // 重新打开日志流，避免后续日志丢失
+			return false;
+		}
+		file.close();
+		g_logFile.open(filePath, std::ios::app);
+		return true;
+	}
 
 }

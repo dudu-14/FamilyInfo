@@ -69,6 +69,7 @@ int main()
 		cout << "8. 搜索家庭成员\n";
 		cout << "9. 统计信息\n";
 		cout << "10. 导出CSV\n";
+		cout << "11. 日志管理\n";
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
@@ -601,6 +602,59 @@ int main()
 			else
 			{
 				cout << "导出失败。\n";
+			}
+			continue;
+		}
+		if (s == 11)
+		{
+			// 日志管理
+			while (1)
+			{
+				cout << "======日志管理======\n";
+				cout << "1. 查看日志（最近30条）\n";
+				cout << "2. 清空日志文件\n";
+				cout << "0. 返回\n";
+				cout << "请选择操作: ";
+				int opt;
+				if (!(cin >> opt))
+				{
+					clearInput();
+					cout << "输入无效，请输入数字。\n";
+					continue;
+				}
+				if (!opt)
+				{
+					break;
+				}
+				if (opt == 1)
+				{
+					// 查看日志
+					std::vector<std::string> lines = Log::readLogLines(g_config.logFile, 30);
+					if (lines.empty())
+					{
+						cout << "日志文件为空或不存在。\n";
+					}
+					else
+					{
+						cout << "======最近日志======" << endl;
+						for (const auto& line : lines)
+						{
+							cout << line << endl;
+						}
+					}
+				}
+				else if (opt == 2)
+				{
+					// 清空日志
+					if (Log::clearLogFile(g_config.logFile))
+					{
+						cout << "日志文件已清空。\n";
+					}
+					else
+					{
+						cout << "清空日志失败。\n";
+					}
+				}
 			}
 			continue;
 		}
