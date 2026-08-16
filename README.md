@@ -22,10 +22,10 @@ FamilyInfo/
 ### 图形界面
 
 ```bat
-:: 1. 启动后端（默认端口 8080）
+# 1. 启动后端（默认端口 8080）
 command-line\x64\Debug\command-line.exe --server 8080
 
-:: 2. 另开终端，启动界面（后端没启动时界面里也可以一键启动）
+# 2. 另开终端，启动界面（后端没启动时界面里也可以一键启动）
 python gui-tkinter\main.py
 ```
 
