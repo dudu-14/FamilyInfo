@@ -7,6 +7,15 @@
 1. 用 Visual Studio 编译后端（x64 Debug/Release），得到 `command-line/x64/Debug/command-line.exe`
 2. 安装 Python 3（自带 tkinter，无需安装任何第三方包）
 
+## 用 Visual Studio 打开
+
+本目录已提供 `gui-tkinter.pyproj`（VS 的 Python 项目）：
+
+- 单独打开：VS 里「文件 → 打开 → 项目/解决方案」，选择 `gui-tkinter/gui-tkinter.pyproj`
+- 或在解决方案里打开：`FamilyInfo.slnx` 已包含本项目，把 `gui-tkinter` 设为启动项目后按 F5 即可运行调试
+
+需要 VS 装有「Python 开发」工作负载（本机已装好）。
+
 ## 启动步骤
 
 ### 方式一：手动启动后端，再启动界面

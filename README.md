@@ -8,9 +8,10 @@
 
 ```
 FamilyInfo/
-├── command-line/    # C++ 命令行版（数据层 + CLI 菜单 + HTTP 服务器模式）
-├── gui-tkinter/     # Python tkinter 图形界面（通过 REST API 接入后端）
-└── FamilyInfo.slnx  # Visual Studio 解决方案
+├── command-line/           # C++ 命令行版（数据层 + CLI 菜单 + HTTP 服务器模式）
+├── gui-tkinter/            # Python tkinter 图形界面（通过 REST API 接入后端）
+│   └── gui-tkinter.pyproj  # VS 的 Python 项目（可单独打开或从解决方案打开）
+└── FamilyInfo.slnx         # Visual Studio 解决方案（含 C++ 和 Python 两个项目）
 ```
 
 ## 快速开始
@@ -20,6 +21,9 @@ FamilyInfo/
 用 Visual Studio 编译并运行 `command-line.exe`，按菜单操作（添加 / 显示 / 删除 / 编辑 / 备份 / 恢复 / 设置 / 搜索 / 统计 / 导出 / 日志 / 亲属关系）。
 
 ### 图形界面
+
+用 VS 打开 `FamilyInfo.slnx`（或单独打开 `gui-tkinter/gui-tkinter.pyproj`），把
+`gui-tkinter` 设为启动项目后按 F5 即可运行调试；命令行方式如下：
 
 ```bat
 :: 1. 启动后端（默认端口 8080）
