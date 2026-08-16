@@ -75,6 +75,15 @@ namespace FamilyInfo::Edit
 					if (p.getId() > last_id) {
 						last_id = p.getId(); // 更新全局last_id，避免新增时ID冲突
 					}
+					// 解析亲属关系
+					std::vector<Relation> rels;
+					for (const auto& relItem : item.value("relations", json::array())) {
+						Relation rel;
+						rel.type = parseRelationType(relItem.value("type", "parent"));
+						rel.targetId = relItem.value("target_id", 0);
+						rels.push_back(rel);
+					}
+					p.setRelations(rels);
 					persons.push_back(p);
 				}
 				catch (const std::exception& e) {

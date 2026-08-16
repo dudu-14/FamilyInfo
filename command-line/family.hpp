@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "json.hpp"
 
@@ -29,6 +30,99 @@ namespace FamilyInfo
 	{
 		return sex ? "女" : "男";
 	}
+
+	/// <summary>
+	/// 亲属关系类型，Parent为子女关系的反向（父母）
+	/// </summary>
+	enum RelationType
+	{
+		Parent,  // 父母
+		Father,  // 父亲
+		Mother,  // 母亲
+		Spouse,  // 配偶
+		Child,   // 子女
+		Sibling  // 兄弟姐妹
+	};
+
+	/// <summary>
+	/// 获取关系类型的中文名称
+	/// </summary>
+	/// <param name="type">关系类型</param>
+	/// <returns>中文名称</returns>
+	std::string getRelationString(RelationType type)
+	{
+		switch (type)
+		{
+		case RelationType::Father: return "父亲";
+		case RelationType::Mother: return "母亲";
+		case RelationType::Spouse: return "配偶";
+		case RelationType::Child: return "子女";
+		case RelationType::Sibling: return "兄弟姐妹";
+		default: return "父母";
+		}
+	}
+
+	/// <summary>
+	/// 获取关系类型在JSON中存储的英文名称
+	/// </summary>
+	/// <param name="type">关系类型</param>
+	/// <returns>英文名称</returns>
+	std::string getRelationTypeString(RelationType type)
+	{
+		switch (type)
+		{
+		case RelationType::Father: return "father";
+		case RelationType::Mother: return "mother";
+		case RelationType::Spouse: return "spouse";
+		case RelationType::Child: return "child";
+		case RelationType::Sibling: return "sibling";
+		default: return "parent";
+		}
+	}
+
+	/// <summary>
+	/// 根据英文名称解析关系类型
+	/// </summary>
+	/// <param name="str">英文名称</param>
+	/// <returns>关系类型</returns>
+	RelationType parseRelationType(const std::string& str)
+	{
+		if (str == "father") return RelationType::Father;
+		if (str == "mother") return RelationType::Mother;
+		if (str == "spouse") return RelationType::Spouse;
+		if (str == "child") return RelationType::Child;
+		if (str == "sibling") return RelationType::Sibling;
+		return RelationType::Parent;
+	}
+
+	/// <summary>
+	/// 获取反向关系类型，添加/删除关系时自动补全反向关系
+	/// </summary>
+	/// <param name="type">关系类型</param>
+	/// <returns>反向关系类型</returns>
+	/// <remarks>
+	/// 父亲/母亲的反向是子女，子女的反向是父母，配偶/兄弟姐妹的反向是自身。
+	/// </remarks>
+	RelationType getReverseRelation(RelationType type)
+	{
+		switch (type)
+		{
+		case RelationType::Father:
+		case RelationType::Mother:
+		case RelationType::Parent: return RelationType::Child;
+		case RelationType::Child: return RelationType::Parent;
+		default: return type; // 配偶、兄弟姐妹
+		}
+	}
+
+	/// <summary>
+	/// 一条亲属关系，表示"本成员 是 对方的某类亲属"
+	/// </summary>
+	struct Relation
+	{
+		RelationType type; // 关系类型
+		int targetId;      // 对方成员的ID
+	};
 
 
 	/// <summary>
@@ -161,6 +255,10 @@ namespace FamilyInfo
 		/// </summary>
 		int age;
 		/// <summary>
+		/// 亲属关系列表，记录本成员与其他成员的关系
+		/// </summary>
+		std::vector<Relation> relations;
+		/// <summary>
 		/// 上一个id，用于生成新的id
 		/// </summary>
 	public:
@@ -213,6 +311,63 @@ namespace FamilyInfo
 		/// <param name="_sex">性别枚举</param>
 		void setSex(SexEnum _sex) { this->sex = _sex; }
 
+		//各种关系
+		/// <summary>
+		/// 添加一条亲属关系
+		/// </summary>
+		/// <param name="type">关系类型</param>
+		/// <param name="targetId">对方成员的ID</param>
+		void addRelation(RelationType type, int targetId) { relations.push_back({ type, targetId }); }
+
+		/// <summary>
+		/// 删除一条亲属关系
+		/// </summary>
+		/// <param name="type">关系类型</param>
+		/// <param name="targetId">对方成员的ID</param>
+		/// <returns>删除成功返回true，关系不存在返回false</returns>
+		bool removeRelation(RelationType type, int targetId)
+		{
+			for (auto it = relations.begin(); it != relations.end(); ++it)
+			{
+				if (it->type == type && it->targetId == targetId)
+				{
+					relations.erase(it);
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// 判断某条亲属关系是否已存在
+		/// </summary>
+		/// <param name="type">关系类型</param>
+		/// <param name="targetId">对方成员的ID</param>
+		/// <returns>存在返回true，否则返回false</returns>
+		bool hasRelation(RelationType type, int targetId) const
+		{
+			for (const auto& rel : relations)
+			{
+				if (rel.type == type && rel.targetId == targetId)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// 获取所有亲属关系
+		/// </summary>
+		/// <returns>亲属关系列表</returns>
+		std::vector<Relation> getRelations() const { return relations; }
+
+		/// <summary>
+		/// 设置亲属关系列表，加载数据时使用
+		/// </summary>
+		/// <param name="rels">亲属关系列表</param>
+		void setRelations(const std::vector<Relation>& rels) { this->relations = rels; }
+
 		json toJson()
 		{
 			json j;
@@ -220,6 +375,11 @@ namespace FamilyInfo
 			j["name"] = name;
 			j["birthday"] = getBirthdayString();
 			j["sex"] = sex ? "woman" : "man"; // 存储用英文，避免编码问题
+			j["relations"] = json::array();
+			for (const auto& rel : relations)
+			{
+				j["relations"].push_back({ {"type", getRelationTypeString(rel.type)}, {"target_id", rel.targetId} });
+			}
 			return j;
 		}
 

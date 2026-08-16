@@ -34,6 +34,23 @@ void clearInput()
 }
 
 /// <summary>
+/// 根据ID获取家庭成员姓名
+/// </summary>
+/// <param name="id">成员ID</param>
+/// <returns>姓名，找不到返回"未知"</returns>
+std::string getPersonName(int id)
+{
+	for (const auto& person : g_familyMembers)
+	{
+		if (person.getId() == id)
+		{
+			return person.getName();
+		}
+	}
+	return "未知";
+}
+
+/// <summary>
 /// 程序主入口
 /// </summary>
 /// <returns>退出时返回0</returns>
@@ -71,12 +88,15 @@ int main()
 		cout << "9. 统计信息\n";
 		cout << "10. 导出CSV\n";
 		cout << "11. 日志管理\n";
+		cout << "12. 亲属关系\n";
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
 		if (scanf("%d", &s) != 1) // 输入的不是数字，清空缓冲区后重新输入
 		{
-			while (getchar() != '\n');
+			int c;
+			while ((c = getchar()) != '\n' && c != EOF); // 清空缓冲区
+			if (c == EOF) break; // 输入结束（如管道重定向），退出程序
 			cout << "输入无效，请输入数字。\n";
 			continue;
 		}
@@ -86,7 +106,9 @@ int main()
 			// 退出程序
 			cout << "你确认要退出吗？(y/n): ";
 			char c;
-			while (getchar() != '\n'); // 清空缓冲区，防止读到上次输入留下的换行符
+			int gc;
+			while ((gc = getchar()) != '\n' && gc != EOF); // 清空缓冲区，防止读到上次输入留下的换行符
+			if (gc == EOF) break; // 输入结束，直接退出
 			c = getchar();
 			if (c == 'n' || c == 'N')
 			{
@@ -212,6 +234,18 @@ int main()
 				}
 			}
 			g_familyMembers.erase(it);
+			// 清理其他人身上指向该成员的关系，避免留下无效引用
+			for (auto& person : g_familyMembers)
+			{
+				std::vector<Relation> rels = person.getRelations(); // 取副本，遍历时修改原列表是安全的
+				for (const auto& rel : rels)
+				{
+					if (rel.targetId == delId)
+					{
+						person.removeRelation(rel.type, delId);
+					}
+				}
+			}
 			UI::printSuccess("家庭成员删除成功: " + std::to_string(delId) + "\n");
 			Edit::writePersonData(g_familyMembers, g_config.dataFile);
 			continue;
@@ -249,6 +283,7 @@ int main()
 				if (!(cin >> opt))
 				{
 					clearInput();
+					if (std::cin.eof()) break; // 输入结束（如管道重定向），退出子菜单
 					cout << "输入无效，请输入数字。\n";
 					continue;
 				}
@@ -385,6 +420,7 @@ int main()
 				if (!(cin >> opt))
 				{
 					clearInput();
+					if (std::cin.eof()) break; // 输入结束（如管道重定向），退出子菜单
 					cout << "输入无效，请输入数字。\n";
 					continue;
 				}
@@ -620,6 +656,7 @@ int main()
 				if (!(cin >> opt))
 				{
 					clearInput();
+					if (std::cin.eof()) break; // 输入结束（如管道重定向），退出子菜单
 					cout << "输入无效，请输入数字。\n";
 					continue;
 				}
@@ -654,6 +691,193 @@ int main()
 					else
 					{
 						cout << "清空日志失败。\n";
+					}
+				}
+			}
+			continue;
+		}
+		if (s == 12)
+		{
+			// 亲属关系
+			while (1)
+			{
+				UI::printTitle("======亲属关系======\n");
+				cout << "1. 添加关系\n";
+				cout << "2. 删除关系\n";
+				cout << "3. 查看关系\n";
+				cout << "0. 返回\n";
+				cout << "请选择操作: ";
+				int opt;
+				if (!(cin >> opt))
+				{
+					clearInput();
+					if (std::cin.eof()) break; // 输入结束（如管道重定向），退出子菜单
+					cout << "输入无效，请输入数字。\n";
+					continue;
+				}
+				if (!opt)
+				{
+					break;
+				}
+				if (opt == 1)
+				{
+					// 添加关系
+					cout << "请输入成员A的ID: ";
+					int idA;
+					if (!(cin >> idA))
+					{
+						clearInput();
+						cout << "ID输入无效。\n";
+						continue;
+					}
+					auto itA = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+						[idA](const Person& p) { return p.getId() == idA; });
+					if (itA == g_familyMembers.end())
+					{
+						UI::printWarn("未找到ID为 " + std::to_string(idA) + " 的家庭成员。\n");
+						continue;
+					}
+					cout << "请选择关系类型 (1-父亲, 2-母亲, 3-配偶, 4-子女, 5-兄弟姐妹): ";
+					int typeInt;
+					if (!(cin >> typeInt))
+					{
+						clearInput();
+						cout << "关系类型输入无效。\n";
+						continue;
+					}
+					if (typeInt < 1 || typeInt > 5)
+					{
+						UI::printWarn("关系类型无效。\n");
+						continue;
+					}
+					RelationType type = (RelationType)typeInt; // 菜单1-5正好对应Father..Sibling
+					cout << "请输入成员B的ID: ";
+					int idB;
+					if (!(cin >> idB))
+					{
+						clearInput();
+						cout << "ID输入无效。\n";
+						continue;
+					}
+					auto itB = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+						[idB](const Person& p) { return p.getId() == idB; });
+					if (itB == g_familyMembers.end())
+					{
+						UI::printWarn("未找到ID为 " + std::to_string(idB) + " 的家庭成员。\n");
+						continue;
+					}
+					if (idA == idB)
+					{
+						UI::printWarn("不能和自己建立关系。\n");
+						continue;
+					}
+					if (itA->hasRelation(type, idB))
+					{
+						UI::printWarn("该关系已存在。\n");
+						continue;
+					}
+					itA->addRelation(type, idB);
+					itB->addRelation(getReverseRelation(type), idA); // 自动补全反向关系
+					Edit::writePersonData(g_familyMembers, g_config.dataFile);
+					UI::printSuccess("关系添加成功: " + itA->getName() + " 是 " + itB->getName() + " 的" + getRelationString(type) + "\n");
+				}
+				else if (opt == 2)
+				{
+					// 删除关系
+					cout << "请输入成员ID: ";
+					int pid;
+					if (!(cin >> pid))
+					{
+						clearInput();
+						cout << "ID输入无效。\n";
+						continue;
+					}
+					auto it = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+						[pid](const Person& p) { return p.getId() == pid; });
+					if (it == g_familyMembers.end())
+					{
+						UI::printWarn("未找到ID为 " + std::to_string(pid) + " 的家庭成员。\n");
+						continue;
+					}
+					std::vector<Relation> rels = it->getRelations();
+					if (rels.empty())
+					{
+						UI::printWarn("该成员没有任何关系。\n");
+						continue;
+					}
+					cout << "该成员的关系列表:\n";
+					for (size_t i = 0; i < rels.size(); i++)
+					{
+						cout << i + 1 << ". " << getRelationString(rels[i].type) << ": ID " << rels[i].targetId
+							<< " (" << getPersonName(rels[i].targetId) << ")" << endl;
+					}
+					cout << "请选择要删除的关系 (0-取消): ";
+					int choice;
+					if (!(cin >> choice))
+					{
+						clearInput();
+						cout << "选择无效。\n";
+						continue;
+					}
+					if (choice <= 0 || choice > (int)rels.size())
+					{
+						continue;
+					}
+					Relation delRel = rels[choice - 1];
+					it->removeRelation(delRel.type, delRel.targetId);
+					// 同时删除反向关系：删除对方身上所有指向本成员的关系
+					auto itTarget = std::find_if(g_familyMembers.begin(), g_familyMembers.end(),
+						[delRel](const Person& p) { return p.getId() == delRel.targetId; });
+					if (itTarget != g_familyMembers.end())
+					{
+						std::vector<Relation> targetRels = itTarget->getRelations();
+						for (const auto& rel : targetRels)
+						{
+							if (rel.targetId == pid)
+							{
+								itTarget->removeRelation(rel.type, pid);
+							}
+						}
+					}
+					Edit::writePersonData(g_familyMembers, g_config.dataFile);
+					UI::printSuccess("关系删除成功。\n");
+				}
+				else if (opt == 3)
+				{
+					// 查看关系
+					bool any = false;
+					for (auto& person : g_familyMembers)
+					{
+						std::vector<Relation> rels = person.getRelations();
+						if (rels.empty())
+						{
+							continue;
+						}
+						any = true;
+						cout << "ID: " << person.getId() << ", 姓名: " << person.getName() << endl;
+						// 按类型分组显示
+						for (int t = (int)RelationType::Parent; t <= (int)RelationType::Sibling; t++)
+						{
+							std::string names;
+							int count = 0;
+							for (const auto& rel : rels)
+							{
+								if (rel.type == (RelationType)t)
+								{
+									if (count > 0) names += ", ";
+									names += getPersonName(rel.targetId) + " (ID " + std::to_string(rel.targetId) + ")";
+									count++;
+								}
+							}
+							if (count > 0)
+							{
+								cout << "  " << getRelationString((RelationType)t) << ": " << names << endl;
+							}
+						}
+					}
+					if (!any)
+					{
+						cout << "还没有任何亲属关系。\n";
 					}
 				}
 			}
