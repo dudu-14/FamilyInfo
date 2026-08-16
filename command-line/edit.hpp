@@ -59,22 +59,29 @@ namespace FamilyInfo::Edit
 			file >> j;
 			persons.clear();
 			for (const auto& item : j) {
-				std::string name = item.value("name", "");
-				std::string birthdayStr = item.value("birthday", "2000-01-01");
-				int id = item.value("id", 0);
-				std::string sexStr = item.value("sex", "man");
-				SexEnum sex = (sexStr == "woman" || sexStr == "女") ? SexEnum::Woman : SexEnum::Man;
-				Person p;
-				if (id > 0) {
-					p = Person(id, name, birthdayStr, sex); // 直接恢复原本的ID，不递增last_id
+				try {
+					std::string name = item.value("name", "");
+					std::string birthdayStr = item.value("birthday", "2000-01-01");
+					int id = item.value("id", 0);
+					std::string sexStr = item.value("sex", "man");
+					SexEnum sex = (sexStr == "woman" || sexStr == "女") ? SexEnum::Woman : SexEnum::Man;
+					Person p;
+					if (id > 0) {
+						p = Person(id, name, birthdayStr, sex); // 直接恢复原本的ID，不递增last_id
+					}
+					else {
+						p = Person(name, birthdayStr, sex); // 旧数据没有ID字段，自动分配新ID
+					}
+					if (p.getId() > last_id) {
+						last_id = p.getId(); // 更新全局last_id，避免新增时ID冲突
+					}
+					persons.push_back(p);
 				}
-				else {
-					p = Person(name, birthdayStr, sex); // 旧数据没有ID字段，自动分配新ID
+				catch (const std::exception& e) {
+					// 单条数据无效（如生日不是真实日期），跳过并警告，不影响其他数据
+					std::cerr << "[WARN] 跳过无效的家庭成员数据: " << e.what() << std::endl;
+					FamilyInfo::Log::logWarn("跳过无效的家庭成员数据: " + std::string(e.what()));
 				}
-				if (p.getId() > last_id) {
-					last_id = p.getId(); // 更新全局last_id，避免新增时ID冲突
-				}
-				persons.push_back(p);
 			}
 			FamilyInfo::Log::logInfo("家庭成员数据已成功从文件加载: " + filePath);
 		}

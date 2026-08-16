@@ -32,6 +32,37 @@ namespace FamilyInfo
 
 
 	/// <summary>
+	/// 判断是否为闰年
+	/// </summary>
+	/// <param name="year">年份</param>
+	/// <returns>闰年返回true，否则返回false</returns>
+	bool isLeapYear(int year)
+	{
+		return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+	}
+
+	/// <summary>
+	/// 判断年月日是否为有效日期
+	/// </summary>
+	/// <param name="year">年份</param>
+	/// <param name="month">月份</param>
+	/// <param name="day">日期</param>
+	/// <returns>有效返回true，否则返回false</returns>
+	bool isValidDate(int year, int month, int day)
+	{
+		if (year < 1 || month < 1 || month > 12 || day < 1)
+		{
+			return false;
+		}
+		int daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+		if (month == 2 && isLeapYear(year))
+		{
+			daysInMonth[1] = 29;
+		}
+		return day <= daysInMonth[month - 1];
+	}
+
+	/// <summary>
 	/// 生日类型，用于存储出生年、月、日
 	/// </summary>
 	/// <remarks>
@@ -61,9 +92,17 @@ namespace FamilyInfo
 			{
 				throw std::invalid_argument("生日格式不正确，应为YYYY-MM-DD");
 			}
-			this->year = (std::stoi(_birthday.substr(0, 4)));
-			this->month = (std::stoi(_birthday.substr(5, 2)));
-			this->day = (std::stoi(_birthday.substr(8, 2)));
+			int y = (std::stoi(_birthday.substr(0, 4)));
+			int m = (std::stoi(_birthday.substr(5, 2)));
+			int d = (std::stoi(_birthday.substr(8, 2)));
+			// 校验是否为真实存在的日期
+			if (!isValidDate(y, m, d))
+			{
+				throw std::invalid_argument("生日不是有效日期");
+			}
+			this->year = y;
+			this->month = m;
+			this->day = d;
 		}
 
 
@@ -77,10 +116,17 @@ namespace FamilyInfo
 		/// </remarks>
 		BirthdayClass(int _birthday)
 		{
-
-			year = _birthday / 10000;
-			month = _birthday / 100 % 100;
-			day = _birthday % 100;
+			int y = _birthday / 10000;
+			int m = _birthday / 100 % 100;
+			int d = _birthday % 100;
+			// 校验是否为真实存在的日期
+			if (!isValidDate(y, m, d))
+			{
+				throw std::invalid_argument("生日不是有效日期");
+			}
+			year = y;
+			month = m;
+			day = d;
 		}
 		int year, month, day;
 	};
