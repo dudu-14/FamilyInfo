@@ -284,6 +284,8 @@ class FamilyInfoApp:
 
     def show_connect_dialog(self, reason):
         """弹出连接失败对话框，含启动后端/重试/退出按钮。"""
+        if self._connect_dialog is not None:
+            return  # 防止重复弹窗
         dlg = tk.Toplevel(self.root)
         self._connect_dialog = dlg
         dlg.title("无法连接后端")
@@ -380,6 +382,7 @@ class FamilyInfoApp:
         else:
             self.set_status("后端启动超时，请确认端口 %d 未被占用" % self.port)
             self._backend_process = None
+            self.show_connect_dialog("后端启动超时，请确认端口 %d 未被占用" % self.port)
 
     # ---------- 数据刷新 ----------
     def refresh_all(self, search=None):
