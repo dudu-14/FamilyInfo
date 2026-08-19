@@ -47,13 +47,39 @@ def calc_age(birthday):
         return None
 
 
+def normalize_birthday(text):
+    """将各种常见格式的生日转为YYYY-MM-DD格式（零填充），失败返回None。
+
+    支持：2000-1-5, 2000/1/5, 2000.1.5, 20000105, 2000-01-05
+    """
+    text = text.strip()
+    if not text:
+        return None
+    # 带分隔符: 2000-1-5 / 2000/1/5 / 2000.1.5
+    for sep in ("-", "/", "."):
+        if sep in text:
+            parts = text.split(sep)
+            if len(parts) == 3:
+                try:
+                    y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+                    datetime.date(y, m, d)  # 验证是否真实日期
+                    return "%04d-%02d-%02d" % (y, m, d)
+                except (ValueError, IndexError):
+                    return None
+    # 无分隔符: 20000105
+    if len(text) == 8 and text.isdigit():
+        try:
+            y, m, d = int(text[:4]), int(text[4:6]), int(text[6:8])
+            datetime.date(y, m, d)
+            return "%04d-%02d-%02d" % (y, m, d)
+        except ValueError:
+            return None
+    return None
+
+
 def valid_birthday(text):
-    """校验生日是否为合法的YYYY-MM-DD真实日期。"""
-    try:
-        datetime.date.fromisoformat(text)
-        return True
-    except ValueError:
-        return False
+    """校验生日是否为可识别的合法日期。"""
+    return normalize_birthday(text) is not None
 
 
 def backend_cwd(exe_path):
@@ -567,12 +593,13 @@ class FamilyInfoApp:
 
         def save():
             name = name_var.get().strip()
-            birthday = birth_var.get().strip()
+            birthday_raw = birth_var.get().strip()
             if not name:
                 err.config(text="姓名不能为空")
                 return
-            if not valid_birthday(birthday):
-                err.config(text="生日格式不正确，应为YYYY-MM-DD的真实日期")
+            birthday = normalize_birthday(birthday_raw)
+            if birthday is None:
+                err.config(text="生日格式不正确，请尝试 YYYY-MM-DD / YYYY/MM/DD / YYYYMMDD")
                 return
             sex = "man" if sex_var.get() == "男" else "woman"
             try:
