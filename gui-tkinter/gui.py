@@ -78,6 +78,9 @@ class FamilyInfoApp:
         self._sort_col = None
         self._sort_desc = False
         self._persons = []
+        self._all_persons = []  # 始终保存全量成员列表，供关系页下拉框使用
+        self._backend_process = None  # 跟踪后端进程，避免重复启动
+        self._connect_dialog = None  # 跟踪连接对话框，避免重复弹窗
 
         self.root = tk.Tk()
         self.root.title("家庭信息管理系统")
@@ -217,8 +220,15 @@ class FamilyInfoApp:
             self.member_tree.heading(col, text=headers[col],
                                      command=lambda c=col: self._sort_members(c))
             self.member_tree.column(col, width=widths[col], anchor="center")
-        self.member_tree.pack(fill="both", expand=True)
+        # 滚动条
+        member_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=self.member_tree.yview)
+        self.member_tree.configure(yscrollcommand=member_scroll.set)
+        self.member_tree.pack(side="left", fill="both", expand=True)
+        member_scroll.pack(side="right", fill="y")
+        # 双击编辑、Delete删除、Enter编辑
         self.member_tree.bind("<Double-1>", lambda e: self.open_edit_dialog())
+        self.member_tree.bind("<Delete>", lambda e: self.delete_selected())
+        self.member_tree.bind("<Return>", lambda e: self.open_edit_dialog())
 
     # ---------- 关系标签页 ----------
     def _build_relation_tab(self):
@@ -245,12 +255,19 @@ class FamilyInfoApp:
         for col, text, width in [("person", "成员", 240), ("type", "关系", 140), ("target", "对方", 240)]:
             self.rel_tree.heading(col, text=text)
             self.rel_tree.column(col, width=width, anchor="center")
-        self.rel_tree.pack(fill="both", expand=True)
+        # 滚动条
+        rel_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=self.rel_tree.yview)
+        self.rel_tree.configure(yscrollcommand=rel_scroll.set)
+        self.rel_tree.pack(side="left", fill="both", expand=True)
+        rel_scroll.pack(side="right", fill="y")
+        # Delete键删除关系
+        self.rel_tree.bind("<Delete>", lambda e: self.delete_relation())
         ttk.Button(tree_frame, text="删除选中关系", style="Danger.TButton",
                    command=self.delete_relation).pack(pady=8)
 
     # ---------- 后端连接 ----------
     def connect_or_prompt(self):
+        """尝试连接后端，失败则弹窗（防止重复弹窗）。"""
         try:
             self.api.list_persons()
             self._set_connected(True)
@@ -260,14 +277,20 @@ class FamilyInfoApp:
             if self.smoke:
                 self.set_status("自检：后端未连接（%s）" % e)
                 return
+            # 防止重复弹窗
+            if self._connect_dialog is not None:
+                return
             self.show_connect_dialog(str(e))
 
     def show_connect_dialog(self, reason):
+        """弹出连接失败对话框，含启动后端/重试/退出按钮。"""
         dlg = tk.Toplevel(self.root)
+        self._connect_dialog = dlg
         dlg.title("无法连接后端")
         dlg.configure(bg=CARD)
         dlg.transient(self.root)
         dlg.grab_set()
+        dlg.protocol("WM_DELETE_WINDOW", lambda: self._dismiss_connect_dialog())
         w, h = 420, 190
         x = (dlg.winfo_screenwidth() - w) // 2
         y = (dlg.winfo_screenheight() - h) // 2
@@ -282,16 +305,25 @@ class FamilyInfoApp:
                  bg=CARD, fg=MUTED, font=FONT_SMALL).pack(pady=(0, 10))
 
         def start_backend():
+            self._dismiss_connect_dialog()
             self.start_backend()
-            dlg.destroy()
+
+        def retry():
+            self._dismiss_connect_dialog()
+            self.connect_or_prompt()
 
         btns = tk.Frame(dlg, bg=CARD)
         btns.pack(pady=8)
         ttk.Button(btns, text="启动后端", style="Primary.TButton",
                    command=start_backend).pack(side="left", padx=6)
-        ttk.Button(btns, text="重试", command=lambda: (dlg.destroy(), self.connect_or_prompt())
-                   ).pack(side="left", padx=6)
+        ttk.Button(btns, text="重试", command=retry).pack(side="left", padx=6)
         ttk.Button(btns, text="退出", command=self.root.destroy).pack(side="left", padx=6)
+
+    def _dismiss_connect_dialog(self):
+        """关闭并清理连接对话框引用。"""
+        if self._connect_dialog is not None:
+            self._connect_dialog.destroy()
+            self._connect_dialog = None
 
     def find_backend_exe(self):
         if self.backend_exe and os.path.isfile(self.backend_exe):
@@ -308,20 +340,46 @@ class FamilyInfoApp:
         return None
 
     def start_backend(self):
+        """启动后端exe，启动后自动多次重试连接。"""
+        # 如果已经启动过且进程仍在运行，直接重试连接
+        if self._backend_process is not None and self._backend_process.poll() is None:
+            self.set_status("后端已在运行中，等待连接...")
+            self._retry_connect(0)
+            return
+        self._backend_process = None
+
         exe = self.find_backend_exe()
         if not exe:
             messagebox.showerror("未找到后端", "没有找到 command-line.exe。\n"
                                  "请先编译项目，或通过 --backend 参数指定路径。")
             return
         try:
-            subprocess.Popen([exe, "--server", str(self.port)],
-                             cwd=backend_cwd(exe))
+            self._backend_process = subprocess.Popen(
+                [exe, "--server", str(self.port)],
+                cwd=backend_cwd(exe))
         except Exception as e:
             messagebox.showerror("启动失败", "启动后端失败: %s" % e)
             return
         self.set_status("正在启动后端...")
-        # 稍等后自动重连
-        self.root.after(900, self.connect_or_prompt)
+        self._retry_connect(0)
+
+    def _retry_connect(self, attempt):
+        """多次重试连接后端，间隔递增（0.5s / 1s / 2s / 3s）。"""
+        try:
+            self.api.list_persons()
+            self._set_connected(True)
+            self.refresh_all()
+            self.set_status("后端已连接")
+            return
+        except ApiError:
+            pass
+        delays = [500, 1000, 2000, 3000]
+        if attempt < len(delays):
+            self.set_status("等待后端启动... (%d/%d)" % (attempt + 1, len(delays)))
+            self.root.after(delays[attempt], lambda: self._retry_connect(attempt + 1))
+        else:
+            self.set_status("后端启动超时，请确认端口 %d 未被占用" % self.port)
+            self._backend_process = None
 
     # ---------- 数据刷新 ----------
     def refresh_all(self, search=None):
@@ -331,6 +389,7 @@ class FamilyInfoApp:
                 self.set_status("搜索结果 %d 条" % len(self._persons))
             else:
                 self._persons = self.api.list_persons()
+                self._all_persons = self._persons  # 全量列表，供关系页下拉框使用
                 self.set_status("已刷新")
             self._refresh_member_tree()
             self._refresh_stats()
@@ -392,19 +451,25 @@ class FamilyInfoApp:
             s = self.api.stats()
         except ApiError:
             return
-        oldest = s.get("oldest", {})
-        youngest = s.get("youngest", {})
-        self.stat_labels["total"].config(text="共 %d 人" % s.get("total", 0))
+        total = s.get("total", 0)
+        self.stat_labels["total"].config(text="共 %d 人" % total)
         self.stat_labels["man"].config(text="男 %d" % s.get("man", 0))
         self.stat_labels["woman"].config(text="女 %d" % s.get("woman", 0))
-        self.stat_labels["avg"].config(text="平均年龄 %.1f" % s.get("avg_age", 0))
-        self.stat_labels["oldest"].config(
-            text="最年长 %s(%d)" % (oldest.get("name", "--"), oldest.get("age", 0)))
-        self.stat_labels["youngest"].config(
-            text="最年幼 %s(%d)" % (youngest.get("name", "--"), youngest.get("age", 0)))
+        if total > 0:
+            oldest = s.get("oldest", {})
+            youngest = s.get("youngest", {})
+            self.stat_labels["avg"].config(text="平均年龄 %.1f" % s.get("avg_age", 0))
+            self.stat_labels["oldest"].config(
+                text="最年长 %s(%d)" % (oldest.get("name", "--"), oldest.get("age", 0)))
+            self.stat_labels["youngest"].config(
+                text="最年幼 %s(%d)" % (youngest.get("name", "--"), youngest.get("age", 0)))
+        else:
+            self.stat_labels["avg"].config(text="平均年龄 --")
+            self.stat_labels["oldest"].config(text="最年长 --")
+            self.stat_labels["youngest"].config(text="最年幼 --")
 
     def _person_choices(self):
-        return ["%d  %s" % (p["id"], p["name"]) for p in self._persons]
+        return ["%d  %s" % (p["id"], p["name"]) for p in self._all_persons]
 
     def _refresh_relation_combos(self):
         choices = self._person_choices()
