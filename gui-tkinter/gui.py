@@ -527,7 +527,7 @@ class FamilyInfoApp:
         dlg.configure(bg=CARD)
         dlg.transient(self.root)
         dlg.grab_set()
-        w, h = 340, 260
+        w, h = 380, 280
         x = (dlg.winfo_screenwidth() - w) // 2
         y = (dlg.winfo_screenheight() - h) // 2
         dlg.geometry("%dx%d+%d+%d" % (w, h, x, y))
@@ -537,28 +537,33 @@ class FamilyInfoApp:
         birth_var = tk.StringVar(value=person["birthday"] if is_edit else "")
         sex_var = tk.StringVar(value=SEX_TEXT.get(person.get("sex"), "男") if is_edit else "男")
 
-        def row(label, widget):
-            f = tk.Frame(dlg, bg=CARD)
-            f.pack(fill="x", padx=22, pady=8)
-            tk.Label(f, text=label, bg=CARD, fg=MUTED, font=FONT, width=8,
-                     anchor="w").pack(side="left")
-            widget.pack(side="left", fill="x", expand=True)
+        # 使用grid布局，标签和输入框对齐整齐
+        form = tk.Frame(dlg, bg=CARD)
+        form.pack(fill="both", expand=True, padx=24, pady=(18, 6))
 
-        name_entry = ttk.Entry(dlg, textvariable=name_var, font=FONT)
-        birth_entry = ttk.Entry(dlg, textvariable=birth_var, font=FONT)
-        row("姓名:", name_entry)
-        row("生日:", birth_entry)
-        f = tk.Frame(dlg, bg=CARD)
-        f.pack(fill="x", padx=22, pady=8)
-        tk.Label(f, text="性别:", bg=CARD, fg=MUTED, font=FONT, width=8,
-                 anchor="w").pack(side="left")
+        tk.Label(form, text="姓名:", bg=CARD, fg=MUTED, font=FONT, width=6,
+                 anchor="e").grid(row=0, column=0, padx=(0, 8), pady=10, sticky="e")
+        ttk.Entry(form, textvariable=name_var, font=FONT, width=28).grid(
+            row=0, column=1, sticky="ew", pady=10)
+
+        tk.Label(form, text="生日:", bg=CARD, fg=MUTED, font=FONT, width=6,
+                 anchor="e").grid(row=1, column=0, padx=(0, 8), pady=10, sticky="e")
+        ttk.Entry(form, textvariable=birth_var, font=FONT, width=28).grid(
+            row=1, column=1, sticky="ew", pady=10)
+
+        tk.Label(form, text="性别:", bg=CARD, fg=MUTED, font=FONT, width=6,
+                 anchor="e").grid(row=2, column=0, padx=(0, 8), pady=10, sticky="e")
+        sex_frame = tk.Frame(form, bg=CARD)
+        sex_frame.grid(row=2, column=1, sticky="w", pady=10)
         for text, val in (("男", "男"), ("女", "女")):
-            tk.Radiobutton(f, text=text, variable=sex_var, value=val, bg=CARD,
-                           fg=TEXT, font=FONT, selectcolor=CARD,
-                           activebackground=CARD).pack(side="left", padx=6)
+            tk.Radiobutton(sex_frame, text=text, variable=sex_var, value=val,
+                           bg=CARD, fg=TEXT, font=FONT, selectcolor=CARD,
+                           activebackground=CARD).pack(side="left", padx=(0, 14))
 
-        err = tk.Label(dlg, text="", bg=CARD, fg=DANGER, font=FONT_SMALL)
-        err.pack(pady=(2, 0))
+        form.columnconfigure(1, weight=1)
+
+        err = tk.Label(form, text="", bg=CARD, fg=DANGER, font=FONT_SMALL)
+        err.grid(row=3, column=0, columnspan=2, pady=(6, 0), sticky="w")
 
         def save():
             name = name_var.get().strip()
@@ -584,7 +589,7 @@ class FamilyInfoApp:
             self.refresh_all()
 
         btns = tk.Frame(dlg, bg=CARD)
-        btns.pack(pady=12)
+        btns.pack(pady=(0, 14))
         ttk.Button(btns, text="保存", style="Primary.TButton", command=save).pack(side="left", padx=6)
         ttk.Button(btns, text="取消", command=dlg.destroy).pack(side="left", padx=6)
 
