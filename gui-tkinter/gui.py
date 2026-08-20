@@ -107,6 +107,7 @@ class FamilyInfoApp:
         self._all_persons = []  # 始终保存全量成员列表，供关系页下拉框使用
         self._backend_process = None  # 跟踪后端进程，避免重复启动
         self._connect_dialog = None  # 跟踪连接对话框，避免重复弹窗
+        self._graph_nodes = {}  # 关系图谱节点坐标缓存 {id: (x1,y1,x2,y2)}
 
         self.root = tk.Tk()
         self.root.title("家庭信息管理系统")
@@ -179,16 +180,20 @@ class FamilyInfoApp:
                                      fg="white", font=FONT_SMALL)
         self.status_label.pack(side="right", padx=(0, 4), pady=30)
 
-        # 主内容区：两个标签页
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=16, pady=(14, 6))
-        self.tab_members = tk.Frame(notebook, bg=CARD)
-        self.tab_relations = tk.Frame(notebook, bg=CARD)
-        notebook.add(self.tab_members, text="  成员列表  ")
-        notebook.add(self.tab_relations, text="  亲属关系  ")
+        # 主内容区：三个标签页
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill="both", expand=True, padx=16, pady=(14, 6))
+        self.tab_members = tk.Frame(self.notebook, bg=CARD)
+        self.tab_relations = tk.Frame(self.notebook, bg=CARD)
+        self.tab_graph = tk.Frame(self.notebook, bg=CARD)
+        self.notebook.add(self.tab_members, text="  成员列表  ")
+        self.notebook.add(self.tab_relations, text="  亲属关系  ")
+        self.notebook.add(self.tab_graph, text="  关系图谱  ")
+        self.notebook.bind("<<NotebookTabChanged>>", lambda e: self._on_tab_changed())
 
         self._build_member_tab()
         self._build_relation_tab()
+        self._build_graph_tab()
 
         # 底部状态栏
         statusbar = tk.Frame(self.root, bg=BG)
@@ -290,6 +295,192 @@ class FamilyInfoApp:
         self.rel_tree.bind("<Delete>", lambda e: self.delete_relation())
         ttk.Button(tree_frame, text="删除选中关系", style="Danger.TButton",
                    command=self.delete_relation).pack(pady=8)
+
+    # ---------- 关系图谱标签页 ----------
+    def _build_graph_tab(self):
+        bar = self._card(self.tab_graph, padx=10, pady=8)
+        ttk.Button(bar, text="刷新图谱", command=self._refresh_graph).pack(side="left", padx=4)
+        tk.Label(bar, text="提示：滚动条平移查看，单击节点查看详情", bg=CARD, fg=MUTED,
+                 font=FONT_SMALL).pack(side="left", padx=12)
+
+        frame = tk.Frame(self.tab_graph, bg=CARD)
+        frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.graph_canvas = tk.Canvas(frame, bg="white", highlightthickness=1,
+                                      highlightbackground=BORDER)
+        vbar = ttk.Scrollbar(frame, orient="vertical", command=self.graph_canvas.yview)
+        hbar = ttk.Scrollbar(frame, orient="horizontal", command=self.graph_canvas.xview)
+        self.graph_canvas.configure(yscrollcommand=vbar.set, xscrollcommand=hbar.set)
+        self.graph_canvas.grid(row=0, column=0, sticky="nsew")
+        vbar.grid(row=0, column=1, sticky="ns")
+        hbar.grid(row=1, column=0, sticky="ew")
+        frame.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+        self.graph_canvas.bind("<Button-1>", self._on_graph_click)
+
+    def _on_tab_changed(self):
+        """切换到关系图谱标签页时自动刷新。"""
+        try:
+            current = self.notebook.index(self.notebook.select())
+        except tk.TclError:
+            return
+        if current == 2:  # 关系图谱是第三个标签页
+            self._refresh_graph()
+
+    def _refresh_graph(self):
+        """拉取全量成员后重新绘制关系图谱。"""
+        try:
+            self._all_persons = self.api.list_persons()
+        except ApiError:
+            pass
+        self._draw_graph()
+
+    def _draw_graph(self):
+        """在Canvas上绘制家族关系树。"""
+        canvas = self.graph_canvas
+        canvas.delete("all")
+        persons = self._all_persons
+        if not persons:
+            canvas.create_text(320, 200, text="暂无成员数据，请先添加成员并建立关系",
+                               fill=MUTED, font=FONT)
+            canvas.configure(scrollregion=(0, 0, 640, 400))
+            return
+
+        # 1. 构建关系图
+        parents = {p["id"]: set() for p in persons}
+        children = {p["id"]: set() for p in persons}
+        spouses = []
+        for p in persons:
+            for r in p.get("relations", []):
+                t = r["type"]
+                target = r["target_id"]
+                if t in ("father", "mother", "parent"):
+                    parents.setdefault(target, set()).add(p["id"])
+                    children[p["id"]].add(target)
+                elif t == "child":
+                    parents[p["id"]].add(target)
+                    children.setdefault(target, set()).add(p["id"])
+                elif t == "spouse":
+                    spouses.append((p["id"], target))
+
+        # 2. 计算层级（辈分）：无父母者为第0层，子女+1，配偶同层
+        level = {}
+        visited = set()
+        queue = []
+        roots = [p["id"] for p in persons if not parents[p["id"]]]
+        if not roots:
+            roots = [p["id"] for p in persons]
+        for r in roots:
+            if r not in visited:
+                level[r] = 0
+                visited.add(r)
+                queue.append(r)
+        while queue:
+            cur = queue.pop(0)
+            lv = level[cur]
+            for c in children[cur]:
+                if c not in visited:
+                    level[c] = lv + 1
+                    visited.add(c)
+                    queue.append(c)
+            for a, b in spouses:
+                if a == cur and b not in visited:
+                    level[b] = lv
+                    visited.add(b)
+                    queue.append(b)
+                elif b == cur and a not in visited:
+                    level[a] = lv
+                    visited.add(a)
+                    queue.append(a)
+        for p in persons:
+            if p["id"] not in level:
+                level[p["id"]] = 0
+
+        # 3. 布局：同层横向排布，子女尽量排在父母下方
+        NODE_W, NODE_H, GAP_X, GAP_Y = 120, 52, 170, 120
+        by_level = {}
+        for p in persons:
+            by_level.setdefault(level[p["id"]], []).append(p)
+        pos = {}
+
+        def parent_x(p):
+            xs = [pos[pid][0] + NODE_W / 2 for pid in parents[p["id"]] if pid in pos]
+            if not xs:
+                return None
+            return sum(xs) / len(xs)
+
+        for lv in sorted(by_level):
+            people = by_level[lv]
+            people.sort(key=lambda p: (parent_x(p) is None,
+                                       parent_x(p) if parent_x(p) is not None else p["id"]))
+            n = len(people)
+            total_w = (n - 1) * GAP_X
+            start_x = -total_w / 2
+            for i, p in enumerate(people):
+                pos[p["id"]] = (start_x + i * GAP_X, lv * GAP_Y)
+
+        # 4. 画连线（父母-子女为灰线，配偶为橙色虚线）
+        seen = set()
+        for p in persons:
+            for par in parents[p["id"]]:
+                key = (par, p["id"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                a, b = pos[par], pos[p["id"]]
+                canvas.create_line(a[0] + NODE_W / 2, a[1] + NODE_H,
+                                   b[0] + NODE_W / 2, b[1], fill="#94A3B8", width=2)
+        for a_id, b_id in spouses:
+            a, b = pos[a_id], pos[b_id]
+            y = a[1] + NODE_H / 2
+            canvas.create_line(min(a[0], b[0]) + NODE_W, y, max(a[0], b[0]), y,
+                               fill="#F59E0B", width=2, dash=(5, 4))
+
+        # 5. 画节点（男蓝女粉）
+        self._graph_nodes = {}
+        for p in persons:
+            x, y = pos[p["id"]]
+            is_man = p.get("sex") == "man"
+            fill = "#EFF6FF" if is_man else "#FDF2F8"
+            outline = "#2563EB" if is_man else "#DB2777"
+            tag = "n%d" % p["id"]
+            canvas.create_rectangle(x, y, x + NODE_W, y + NODE_H, fill=fill,
+                                    outline=outline, width=2, tags=("node", tag))
+            canvas.create_text(x + NODE_W / 2, y + 20, text=p["name"], fill=TEXT,
+                               font=FONT_BOLD, tags=("node", tag))
+            age = calc_age(p.get("birthday", ""))
+            if age is not None:
+                sub = "%d岁 · %s" % (age, SEX_TEXT.get(p.get("sex"), "?"))
+            else:
+                sub = SEX_TEXT.get(p.get("sex"), "?")
+            canvas.create_text(x + NODE_W / 2, y + 38, text=sub, fill=MUTED,
+                               font=FONT_SMALL, tags=("node", tag))
+            self._graph_nodes[p["id"]] = (x, y, x + NODE_W, y + NODE_H)
+
+        # 6. 设置滚动区域（含边距）
+        xs = [pos[p["id"]][0] for p in persons]
+        ys = [pos[p["id"]][1] for p in persons]
+        margin = 80
+        canvas.configure(scrollregion=(
+            min(xs) - margin, min(ys) - margin,
+            max(xs) + NODE_W + margin, max(ys) + NODE_H + margin))
+
+    def _on_graph_click(self, event):
+        """单击图谱节点，在状态栏显示该成员详情。"""
+        canvas = self.graph_canvas
+        x = canvas.canvasx(event.x)
+        y = canvas.canvasy(event.y)
+        for item in canvas.find_overlapping(x, y, x, y):
+            for tag in canvas.gettags(item):
+                if tag.startswith("n") and tag[1:].isdigit():
+                    pid = int(tag[1:])
+                    p = next((q for q in self._all_persons if q["id"] == pid), None)
+                    if p:
+                        age = calc_age(p.get("birthday", ""))
+                        age_text = ("%d岁" % age) if age is not None else "?"
+                        self.set_status("%s · %s · 生日 %s · %s" % (
+                            p["name"], SEX_TEXT.get(p.get("sex"), "?"),
+                            p["birthday"], age_text))
+                    return
 
     # ---------- 后端连接 ----------
     def connect_or_prompt(self):
@@ -424,6 +615,7 @@ class FamilyInfoApp:
             self._refresh_stats()
             self._refresh_relation_combos()
             self._refresh_relation_tree()
+            self._draw_graph()
         except ApiError as e:
             self._set_connected(False)
             self.set_status("刷新失败: %s" % e)
