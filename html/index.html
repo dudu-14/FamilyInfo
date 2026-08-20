@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家庭信息管理系统 · 网页版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="banner">
+        <div class="banner-title">
+            <h1>家庭信息管理系统</h1>
+            <span class="version">v1.0.0 · 网页版</span>
+        </div>
+        <div class="status">
+            <span id="status-dot" class="dot offline"></span>
+            <span id="status-text">正在连接后端...</span>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab active" data-tab="members">成员管理</button>
+        <button class="tab" data-tab="relations">亲属关系</button>
+        <button class="tab" data-tab="graph">关系图谱</button>
+        <button class="tab" data-tab="stats">统计信息</button>
+    </nav>
+
+    <main>
+        <!-- 成员管理 -->
+        <section id="tab-members" class="panel active">
+            <div class="toolbar">
+                <button id="btn-add" class="btn primary">＋ 添加成员</button>
+                <button id="btn-refresh" class="btn">刷新</button>
+                <button id="btn-export" class="btn">导出CSV</button>
+                <input id="search-input" type="text" placeholder="搜索姓名...">
+                <button id="btn-search" class="btn">搜索</button>
+            </div>
+            <div id="stats-bar" class="stats-bar"></div>
+            <div class="table-wrap">
+                <table id="member-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>姓名</th><th>生日</th><th>年龄</th>
+                            <th>性别</th><th>关系数</th><th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 亲属关系 -->
+        <section id="tab-relations" class="panel">
+            <div class="toolbar">
+                <select id="rel-person-a" class="select"></select>
+                <span class="rel-word">是</span>
+                <select id="rel-type" class="select">
+                    <option value="father">父亲</option>
+                    <option value="mother">母亲</option>
+                    <option value="spouse">配偶</option>
+                    <option value="child">子女</option>
+                    <option value="sibling">兄弟姐妹</option>
+                </select>
+                <span class="rel-word">的</span>
+                <select id="rel-person-b" class="select"></select>
+                <button id="btn-add-rel" class="btn primary">添加关系</button>
+            </div>
+            <div class="table-wrap">
+                <table id="rel-table">
+                    <thead>
+                        <tr><th>成员</th><th>关系</th><th>对方</th><th>操作</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 关系图谱 -->
+        <section id="tab-graph" class="panel">
+            <div class="toolbar">
+                <button id="btn-graph-refresh" class="btn">刷新图谱</button>
+                <span class="hint">提示：滚轮缩放，按住拖动平移，单击节点查看详情</span>
+            </div>
+            <div id="graph-container">
+                <canvas id="graph-canvas"></canvas>
+            </div>
+        </section>
+
+        <!-- 统计信息 -->
+        <section id="tab-stats" class="panel">
+            <div id="stats-cards"></div>
+        </section>
+    </main>
+
+    <!-- 添加/编辑成员弹窗 -->
+    <div id="person-modal" class="modal hidden">
+        <div class="modal-box">
+            <h2 id="modal-title">添加成员</h2>
+            <div class="form-row">
+                <label>姓名</label>
+                <input id="p-name" type="text" placeholder="请输入姓名">
+            </div>
+            <div class="form-row">
+                <label>生日</label>
+                <input id="p-birthday" type="text" placeholder="2000-01-05">
+            </div>
+            <div class="form-row">
+                <label>性别</label>
+                <select id="p-sex">
+                    <option value="man">男</option>
+                    <option value="woman">女</option>
+                </select>
+            </div>
+            <div id="modal-error" class="error"></div>
+            <div class="modal-btns">
+                <button id="btn-save" class="btn primary">保存</button>
+                <button id="btn-cancel" class="btn">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -184,6 +185,7 @@ namespace FamilyInfo::Server
 		switch (status)
 		{
 		case 400: reason = "Bad Request"; break;
+		case 403: reason = "Forbidden"; break;
 		case 404: reason = "Not Found"; break;
 		case 405: reason = "Method Not Allowed"; break;
 		case 500: reason = "Internal Server Error"; break;
@@ -596,6 +598,105 @@ namespace FamilyInfo::Server
 	}
 
 	/// <summary>
+	/// 根据文件扩展名获取MIME类型
+	/// </summary>
+	/// <param name="path">文件路径</param>
+	/// <returns>MIME类型</returns>
+	std::string getMimeType(const std::string& path)
+	{
+		std::string ext;
+		size_t dot = path.find_last_of('.');
+		if (dot != std::string::npos)
+		{
+			ext = path.substr(dot + 1);
+			for (auto& c : ext)
+			{
+				c = (char)std::tolower((unsigned char)c);
+			}
+		}
+		if (ext == "html" || ext == "htm") return "text/html; charset=utf-8";
+		if (ext == "css") return "text/css; charset=utf-8";
+		if (ext == "js") return "application/javascript; charset=utf-8";
+		if (ext == "json") return "application/json; charset=utf-8";
+		if (ext == "png") return "image/png";
+		if (ext == "jpg" || ext == "jpeg") return "image/jpeg";
+		if (ext == "svg") return "image/svg+xml";
+		if (ext == "ico") return "image/x-icon";
+		return "application/octet-stream";
+	}
+
+	/// <summary>
+	/// 查找网页根目录（html/），返回包含index.html的目录（结尾带斜杠），找不到返回空字符串
+	/// </summary>
+	/// <returns>网页根目录</returns>
+	std::string findWebRoot()
+	{
+		// 后端可能从不同目录启动，依次尝试常见位置
+		const std::vector<std::string> candidates = {
+			"html/",       // 工作目录是项目根目录
+			"../html/",    // 工作目录是 command-line/
+			"../../html/", // 工作目录是 command-line/x64/Debug/
+		};
+		for (const auto& c : candidates)
+		{
+			std::ifstream test(c + "index.html");
+			if (test.is_open())
+			{
+				return c;
+			}
+		}
+		return "";
+	}
+
+	/// <summary>
+	/// 读取文件内容（二进制方式，避免中文乱码）
+	/// </summary>
+	/// <param name="path">文件路径</param>
+	/// <param name="out">输出内容</param>
+	/// <returns>读取成功返回true</returns>
+	bool readFileContent(const std::string& path, std::string& out)
+	{
+		std::ifstream file(path, std::ios::binary);
+		if (!file.is_open())
+		{
+			return false;
+		}
+		std::ostringstream ss;
+		ss << file.rdbuf();
+		out = ss.str();
+		return true;
+	}
+
+	/// <summary>
+	/// 托管静态网页文件，供浏览器访问网页管理系统
+	/// </summary>
+	/// <param name="client">客户端套接字</param>
+	/// <param name="path">请求路径</param>
+	void handleStatic(SOCKET client, const std::string& path)
+	{
+		// 防止路径穿越攻击
+		if (path.find("..") != std::string::npos)
+		{
+			sendJsonError(client, 403, "禁止访问");
+			return;
+		}
+		std::string root = findWebRoot();
+		if (root.empty())
+		{
+			sendJsonError(client, 404, "未找到网页目录 html/，请确认项目里有 html/index.html");
+			return;
+		}
+		std::string filePath = (path == "/") ? "index.html" : path.substr(1);
+		std::string content;
+		if (!readFileContent(root + filePath, content))
+		{
+			sendJsonError(client, 404, "文件不存在: " + path);
+			return;
+		}
+		sendResponse(client, 200, getMimeType(filePath), content);
+	}
+
+	/// <summary>
 	/// 处理单个请求，按路径路由
 	/// </summary>
 	void handleRequest(SOCKET client, const HttpRequest& req)
@@ -603,6 +704,14 @@ namespace FamilyInfo::Server
 		std::string path = parsePath(req.target);
 		json query = parseQuery(req.target);
 		Log::logInfo("收到请求: " + req.method + " " + path);
+
+		// 非API的GET请求：托管静态网页（网页管理系统）
+		if (req.method == "GET" && path.rfind("/api", 0) != 0)
+		{
+			handleStatic(client, path);
+			return;
+		}
+
 		try
 		{
 			// 每次请求都重新加载数据，保证与数据文件一致

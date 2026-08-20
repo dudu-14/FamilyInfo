@@ -1,0 +1,220 @@
+/* 家庭信息管理系统 · 网页版样式 */
+:root {
+    --bg: #EEF2F7;
+    --card: #FFFFFF;
+    --primary: #2563EB;
+    --primary-dark: #1D4ED8;
+    --primary-light: #DBEAFE;
+    --text: #1E293B;
+    --muted: #64748B;
+    --border: #E2E8F0;
+    --danger: #DC2626;
+    --danger-dark: #B91C1C;
+    --success: #16A34A;
+    --header-bg: #F1F5F9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- 顶部横幅 ---------- */
+.banner {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.banner-title h1 { font-size: 20px; display: inline; }
+.banner-title .version { font-size: 12px; color: #BFDBFE; margin-left: 10px; }
+.status { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.dot.online { background: #4ADE80; }
+.dot.offline { background: #F87171; }
+
+/* ---------- 标签页 ---------- */
+.tabs {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 16px;
+}
+.tab {
+    border: none;
+    background: none;
+    padding: 14px 22px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--muted);
+    border-bottom: 3px solid transparent;
+}
+.tab:hover { color: var(--primary); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: bold; }
+
+/* ---------- 主内容 ---------- */
+main { flex: 1; padding: 16px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ---------- 工具栏 ---------- */
+.toolbar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.btn {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.btn:hover { background: var(--primary-light); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--primary-dark); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.danger:hover { background: var(--danger-dark); }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+
+input[type="text"], select {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    background: var(--card);
+    color: var(--text);
+}
+input[type="text"]:focus, select:focus { outline: 2px solid var(--primary-light); border-color: var(--primary); }
+.select { min-width: 120px; }
+.rel-word { color: var(--muted); }
+.hint { color: var(--muted); font-size: 13px; }
+
+/* ---------- 统计条 ---------- */
+.stats-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    color: var(--muted);
+    font-size: 13px;
+}
+.stats-bar b { color: var(--text); }
+
+/* ---------- 表格 ---------- */
+.table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: auto;
+    max-height: 60vh;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+    background: var(--header-bg);
+    position: sticky;
+    top: 0;
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+}
+tbody td {
+    padding: 10px 12px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+tbody tr:hover { background: #F8FAFC; }
+.sex-man { color: var(--primary); }
+.sex-woman { color: #DB2777; }
+
+/* ---------- 统计卡片 ---------- */
+#stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+}
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    text-align: center;
+}
+.stat-card .num { font-size: 28px; font-weight: bold; color: var(--primary); }
+.stat-card .label { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+/* ---------- 关系图谱 ---------- */
+#graph-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    height: 68vh;
+    overflow: hidden;
+    position: relative;
+}
+#graph-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+
+/* ---------- 弹窗 ---------- */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+.modal.hidden { display: none; }
+.modal-box {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 24px;
+    width: 360px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+.modal-box h2 { margin-bottom: 16px; font-size: 17px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; color: var(--muted); margin-bottom: 4px; font-size: 13px; }
+.form-row input, .form-row select { width: 100%; }
+.error { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 6px; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+
+/* ---------- 提示条 ---------- */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #334155;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 200;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.toast.hidden { display: none; }

@@ -11,6 +11,7 @@ FamilyInfo/
 ├── command-line/           # C++ 命令行版（数据层 + CLI 菜单 + HTTP 服务器模式）
 ├── gui-tkinter/            # Python tkinter 图形界面（通过 REST API 接入后端）
 │   └── gui-tkinter.pyproj  # VS 的 Python 项目（可单独打开或从解决方案打开）
+├── html/                   # 网页管理系统（浏览器打开，含关系图谱可视化）
 └── FamilyInfo.slnx         # Visual Studio 解决方案（含 C++ 和 Python 两个项目）
 ```
 
@@ -34,6 +35,17 @@ python gui-tkinter\main.py
 ```
 
 详细说明见 [gui-tkinter/README.md](gui-tkinter/README.md)。
+
+### 网页版（HTML 管理系统）
+
+启动后端后，直接用浏览器打开 **http://127.0.0.1:8080/** 即可使用网页管理系统：
+
+```bat
+command-line\x64\Debug\command-line.exe --server 8080
+```
+
+网页版包含成员管理、亲属关系、**关系图谱可视化**（滚轮缩放、拖动平移、单击查看详情）和统计信息，
+界面由后端直接托管（`html/` 目录），无需额外服务器。
 
 ## 数据文件
 
