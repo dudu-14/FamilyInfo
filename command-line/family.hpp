@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <ctime>
 #include "json.hpp"
 
 using json = nlohmann::json;
@@ -281,9 +281,12 @@ namespace FamilyInfo
 		}
 		std::string getSex() const { return getSexString(sex); }
 		int getAge() const {
-			boost::gregorian::date today = boost::gregorian::day_clock::local_day();
-			int currentAge = today.year() - birthday.year;
-			if (today.month() < birthday.month || (today.month() == birthday.month && today.day() < birthday.day)) {
+			// 获取今天的年月日（使用标准库，无第三方依赖）
+			std::time_t now = std::time(nullptr);
+			std::tm tmNow{};
+			localtime_s(&tmNow, &now);
+			int currentAge = (tmNow.tm_year + 1900) - birthday.year;
+			if ((tmNow.tm_mon + 1) < birthday.month || ((tmNow.tm_mon + 1) == birthday.month && tmNow.tm_mday < birthday.day)) {
 				currentAge--;
 			}
 			return currentAge;
