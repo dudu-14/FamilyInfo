@@ -35,5 +35,11 @@
     <ClInclude Include="log.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="server.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ui.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

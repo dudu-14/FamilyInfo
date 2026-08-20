@@ -246,7 +246,13 @@ namespace FamilyInfo::Server
 			}
 			Person p(name, birthday, sex);
 			g_familyMembers.push_back(p);
-			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			if (!Edit::writePersonData(g_familyMembers, g_config.dataFile))
+			{
+				g_familyMembers.pop_back(); // 回滚内存中的新增
+				last_id--;                 // 回滚已递增的last_id
+				sendJsonError(client, 500, "保存数据失败，请检查磁盘空间或文件权限");
+				return;
+			}
 			g_config.last_id = last_id;
 			Config::saveConfig(g_config);
 			sendResponse(client, 200, "application/json; charset=utf-8", p.toJson().dump());
@@ -283,7 +289,11 @@ namespace FamilyInfo::Server
 			{
 				p->setSex(parseSex(j["sex"]));
 			}
-			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			if (!Edit::writePersonData(g_familyMembers, g_config.dataFile))
+			{
+				sendJsonError(client, 500, "保存数据失败，请检查磁盘空间或文件权限");
+				return;
+			}
 			sendResponse(client, 200, "application/json; charset=utf-8", p->toJson().dump());
 		}
 		catch (const std::exception& e)
@@ -319,7 +329,11 @@ namespace FamilyInfo::Server
 		}
 		g_familyMembers.erase(std::remove_if(g_familyMembers.begin(), g_familyMembers.end(),
 			[id](const Person& p) { return p.getId() == id; }), g_familyMembers.end());
-		Edit::writePersonData(g_familyMembers, g_config.dataFile);
+		if (!Edit::writePersonData(g_familyMembers, g_config.dataFile))
+		{
+			sendJsonError(client, 500, "保存数据失败，请检查磁盘空间或文件权限");
+			return;
+		}
 		sendJsonOk(client, "删除成功");
 	}
 
@@ -382,7 +396,11 @@ namespace FamilyInfo::Server
 			}
 			a->addRelation(type, targetId);
 			b->addRelation(getReverseRelation(type), personId);
-			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			if (!Edit::writePersonData(g_familyMembers, g_config.dataFile))
+			{
+				sendJsonError(client, 500, "保存数据失败，请检查磁盘空间或文件权限");
+				return;
+			}
 			sendJsonOk(client, "关系添加成功");
 		}
 		catch (const std::exception& e)
@@ -419,7 +437,11 @@ namespace FamilyInfo::Server
 					b->removeRelation(rel.type, personId);
 				}
 			}
-			Edit::writePersonData(g_familyMembers, g_config.dataFile);
+			if (!Edit::writePersonData(g_familyMembers, g_config.dataFile))
+			{
+				sendJsonError(client, 500, "保存数据失败，请检查磁盘空间或文件权限");
+				return;
+			}
 			sendJsonOk(client, "关系删除成功");
 		}
 		catch (const std::exception& e)

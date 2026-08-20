@@ -23,21 +23,33 @@ namespace FamilyInfo::Edit
 	/// </summary>
 	/// <param name="persons">家庭成员列表，std::vector<Person>&</param>
 	/// <param name="filePath">文件路径，const std::string&</param>
-	/// <returns>无返回值</returns>
-	void writePersonData(std::vector<Person>& persons, const std::string& filePath = "data/family_data.json") {
+	/// <returns>写入成功返回true，失败返回false</returns>
+	bool writePersonData(std::vector<Person>& persons, const std::string& filePath = "data/family_data.json") {
 		FamilyInfo::Log::logInfo("正在写入家庭成员数据到文件: " + filePath);
-		std::ofstream file(filePath);
-		if (!file.is_open()) {
-			std::cerr << "[ERROR] 无法打开文件进行写入: " << filePath << std::endl;
-			FamilyInfo::Log::logError("无法打开文件进行写入: " + filePath);
-			return;
+		try {
+			// 确保父目录存在，避免因目录缺失导致静默写入失败
+			if (!std::filesystem::path(filePath).parent_path().empty()) {
+				std::filesystem::create_directories(std::filesystem::path(filePath).parent_path());
+			}
+			std::ofstream file(filePath);
+			if (!file.is_open()) {
+				std::cerr << "[ERROR] 无法打开文件进行写入: " << filePath << std::endl;
+				FamilyInfo::Log::logError("无法打开文件进行写入: " + filePath);
+				return false;
+			}
+			json j = json::array();
+			for (Person& person : persons) {
+				j.push_back(person.toJson());
+			}
+			file << std::setw(4) << j;
+			FamilyInfo::Log::logInfo("家庭成员数据已成功写入文件: " + filePath);
+			return true;
 		}
-		json j = json::array();
-		for (Person& person : persons) {
-			j.push_back(person.toJson());
+		catch (const std::exception& e) {
+			std::cerr << "[ERROR] 写入家庭成员数据失败: " << e.what() << std::endl;
+			FamilyInfo::Log::logError("写入家庭成员数据失败: " + std::string(e.what()));
+			return false;
 		}
-		file << std::setw(4) << j;
-		FamilyInfo::Log::logInfo("家庭成员数据已成功写入文件: " + filePath);
 	}
 
 	/// <summary>
