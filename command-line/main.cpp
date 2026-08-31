@@ -6,6 +6,8 @@
 #include "edit.hpp"
 #include "ui.hpp"
 #include "server.hpp"
+#include <shellapi.h>
+#pragma comment(lib, "shell32.lib")
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -51,6 +53,25 @@ std::string getPersonName(int id)
 		}
 	}
 	return "未知";
+}
+
+/// <summary>
+/// 打开默认浏览器访问网页管理系统
+/// </summary>
+/// <param name="port">后端端口</param>
+void openWebPage(int port)
+{
+	std::string url = "http://127.0.0.1:" + std::to_string(port) + "/";
+	HINSTANCE result = ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+	if ((INT_PTR)result <= 32)
+	{
+		UI::printError("打开浏览器失败，请手动在浏览器访问: " + url + "\n");
+	}
+	else
+	{
+		UI::printSuccess("已打开网页管理系统: " + url + "\n");
+		UI::printWarn("提示：如果页面打不开，请先另开终端运行 command-line.exe --server " + std::to_string(port) + " 启动后端。\n");
+	}
 }
 
 /// <summary>
@@ -108,6 +129,7 @@ int main(int argc, char* argv[])
 		cout << "10. 导出CSV\n";
 		cout << "11. 日志管理\n";
 		cout << "12. 亲属关系\n";
+		cout << "13. 打开网页\n";
 		cout << "0. 退出\n";
 		cout << "请选择操作: ";
 		int s;
@@ -900,6 +922,12 @@ int main(int argc, char* argv[])
 					}
 				}
 			}
+			continue;
+		}
+		if (s == 13)
+		{
+			// 打开网页管理系统
+			openWebPage(8080);
 			continue;
 		}
 	}
