@@ -56,12 +56,135 @@ std::string getPersonName(int id)
 }
 
 /// <summary>
-/// 打开默认浏览器访问网页管理系统
+/// 检查指定端口上是否有服务在监听（用于判断后端是否已启动）
+/// </summary>
+/// <param name="port">端口</param>
+/// <returns>监听中返回true</returns>
+bool isPortListening(int port)
+{
+	WSADATA wsa;
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+	{
+		return false;
+	}
+	SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (s == INVALID_SOCKET)
+	{
+		WSACleanup();
+		return false;
+	}
+	// 非阻塞连接 + select超时，避免卡住
+	u_long mode = 1;
+	ioctlsocket(s, FIONBIO, &mode);
+	sockaddr_in addr = {};
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons((u_short)port);
+	inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+	connect(s, (sockaddr*)&addr, sizeof(addr));
+	fd_set wset;
+	FD_ZERO(&wset);
+	FD_SET(s, &wset);
+	timeval tv = { 0, 300000 }; // 300毫秒超时
+	bool ok = false;
+	if (select(0, nullptr, &wset, nullptr, &tv) > 0)
+	{
+		int err = 0;
+		int len = sizeof(err);
+		getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&err, &len);
+		ok = (err == 0);
+	}
+	closesocket(s);
+	WSACleanup();
+	return ok;
+}
+
+/// <summary>
+/// 在后台启动HTTP服务器进程（不占用当前终端窗口）
+/// </summary>
+/// <param name="port">端口</param>
+/// <returns>成功返回新进程ID，失败返回0</returns>
+DWORD startServerBackground(int port)
+{
+	char exePath[MAX_PATH];
+	if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0)
+	{
+		return 0;
+	}
+	// 工作目录设为包含 data 目录的上级目录（即 command-line/），保证数据与网页路径正确。
+	// 注意：必须从 exe 所在目录的“上级”开始找，否则可能命中构建输出目录（如 x64/Debug/）
+	// 里残留的旧运行时数据，导致服务器使用错误的 data/ 和找不到 html/。
+	std::string workDir(exePath);
+	size_t pos = workDir.find_last_of("\\/");
+	if (pos != std::string::npos)
+	{
+		workDir = workDir.substr(0, pos);
+	}
+	std::string fallbackDir = workDir; // 若找不到 data/，回退到 exe 所在目录
+	bool found = false;
+	while (true)
+	{
+		size_t p = workDir.find_last_of("\\/");
+		if (p == std::string::npos)
+		{
+			break;
+		}
+		workDir = workDir.substr(0, p);
+		if (std::filesystem::exists(workDir + "\\data"))
+		{
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+	{
+		workDir = fallbackDir;
+	}
+	std::string cmdLine = std::string("\"") + exePath + "\" --server " + std::to_string(port);
+	STARTUPINFOA si = {};
+	si.cb = sizeof(si);
+	PROCESS_INFORMATION pi = {};
+	BOOL ok = CreateProcessA(nullptr, (LPSTR)cmdLine.c_str(), nullptr, nullptr, FALSE,
+		DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+		nullptr, workDir.c_str(), &si, &pi);
+	if (!ok)
+	{
+		return 0;
+	}
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
+	return pi.dwProcessId;
+}
+
+/// <summary>
+/// 打开默认浏览器访问网页管理系统；后端未启动时自动在后台启动
 /// </summary>
 /// <param name="port">后端端口</param>
 void openWebPage(int port)
 {
 	std::string url = "http://127.0.0.1:" + std::to_string(port) + "/";
+	bool started = false;
+	if (!isPortListening(port))
+	{
+		UI::printWarn("后端服务未启动，正在自动启动...\n");
+		DWORD pid = startServerBackground(port);
+		if (pid != 0)
+		{
+			started = true;
+			// 等待服务器就绪（最多约4秒）
+			for (int i = 0; i < 20; i++)
+			{
+				Sleep(200);
+				if (isPortListening(port))
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			UI::printError("自动启动后端失败，请手动运行 command-line.exe --server " + std::to_string(port) + "\n");
+		}
+	}
 	HINSTANCE result = ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 	if ((INT_PTR)result <= 32)
 	{
@@ -70,7 +193,10 @@ void openWebPage(int port)
 	else
 	{
 		UI::printSuccess("已打开网页管理系统: " + url + "\n");
-		UI::printWarn("提示：如果页面打不开，请先另开终端运行 command-line.exe --server " + std::to_string(port) + " 启动后端。\n");
+		if (started)
+		{
+			UI::printWarn("已在后台启动后端服务，网页数据与命令行版共用同一份 data/ 数据。\n");
+		}
 	}
 }
 
@@ -82,6 +208,10 @@ void openWebPage(int port)
 /// <returns>退出时返回0</returns>
 int main(int argc, char* argv[])
 {
+	// 设置控制台为UTF-8编码，确保中文正常显示（Windows 10+ 支持，失败则忽略）
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
+
 	// 服务器模式：command-line.exe --server [端口]，供GUI等外部程序通过REST API接入
 	if (argc >= 2 && std::string(argv[1]) == "--server")
 	{
@@ -101,7 +231,7 @@ int main(int argc, char* argv[])
 	g_config = Config::loadConfig();
 	Log::initLog(g_config.logFile, g_config.debugLogFile, Log::configToLogLevel(g_config.logLevel));
 	last_id = g_config.last_id; // 初始化全局last_id
-	UI::printTitle("======家庭信息管理系统 v1.0.0=====\n");
+	UI::printTitle("======家庭信息管理系统 v1.1.0=====\n");
 	while (1)
 	{
 		// 主循环

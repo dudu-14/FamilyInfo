@@ -13,6 +13,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -542,6 +543,15 @@ namespace FamilyInfo::Server
 	/// <returns>读取成功返回true</returns>
 	bool readRequest(SOCKET client, HttpRequest& req)
 	{
+		// 等待数据到达（最多2秒），防止客户端连接后一直不发数据导致服务器卡死
+		fd_set rset;
+		FD_ZERO(&rset);
+		FD_SET(client, &rset);
+		timeval tv = { 2, 0 };
+		if (select(0, &rset, nullptr, nullptr, &tv) <= 0)
+		{
+			return false;
+		}
 		char buf[4096];
 		std::string buffer;
 		int received = recv(client, buf, sizeof(buf), 0);
@@ -581,10 +591,18 @@ namespace FamilyInfo::Server
 					contentLength = std::stoi(line.substr(line.find(':') + 1));
 				}
 			}
-			// 读取请求体
+			// 读取请求体（同样带超时，防止客户端发送部分数据后停滞）
 			std::string body = buffer.substr(headerEnd + 4);
 			while ((int)body.size() < contentLength)
 			{
+				fd_set rset2;
+				FD_ZERO(&rset2);
+				FD_SET(client, &rset2);
+				timeval tv2 = { 2, 0 };
+				if (select(0, &rset2, nullptr, nullptr, &tv2) <= 0)
+				{
+					break;
+				}
 				received = recv(client, buf, sizeof(buf), 0);
 				if (received <= 0)
 				{
@@ -633,9 +651,10 @@ namespace FamilyInfo::Server
 	{
 		// 后端可能从不同目录启动，依次尝试常见位置
 		const std::vector<std::string> candidates = {
-			"html/",       // 工作目录是项目根目录
-			"../html/",    // 工作目录是 command-line/
-			"../../html/", // 工作目录是 command-line/x64/Debug/
+			"html/",        // 工作目录是项目根目录
+			"../html/",     // 工作目录是 command-line/
+			"../../html/",  // 工作目录是 command-line/x64/
+			"../../../html/", // 工作目录是 command-line/x64/Debug/ 等构建输出目录
 		};
 		for (const auto& c : candidates)
 		{

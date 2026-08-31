@@ -112,6 +112,7 @@ async function refreshAll() {
         renderRelationCombos();
         renderRelations();
         renderStats();
+        refreshGraph();  // 图谱页激活时同步刷新
     } catch (e) {
         setConnected(false);
         toast("无法连接后端: " + e.message);

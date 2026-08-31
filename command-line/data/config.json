@@ -1,7 +1,7 @@
 {
     "app": {
         "name": "家庭信息管理系统",
-        "version": "1.0.0"
+        "version": "1.1.0"
     },
     "behavior": {
         "auto_backup": true,

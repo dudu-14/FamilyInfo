@@ -171,7 +171,7 @@ class FamilyInfoApp:
         banner.pack_propagate(False)
         tk.Label(banner, text="家庭信息管理系统", bg=PRIMARY, fg="white",
                  font=FONT_TITLE).pack(side="left", padx=24, pady=(14, 0))
-        tk.Label(banner, text="v1.0.0 · 图形界面", bg=PRIMARY, fg="#BFDBFE",
+        tk.Label(banner, text="v1.1.0 · 图形界面", bg=PRIMARY, fg="#BFDBFE",
                  font=FONT_SMALL).pack(side="left", padx=(10, 0), pady=(18, 0))
         self.status_dot = tk.Canvas(banner, width=14, height=14, bg=PRIMARY,
                                     highlightthickness=0)
